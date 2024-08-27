@@ -1275,3 +1275,38 @@ def test_diff(tmp_path):
     b = Directory("bbbbb")
     b.x = 2
     assert a.diff(b) == {"aaaaa": ["≠x: 3"], "bbbbb": ["≠x: 2"]}
+
+
+def test_read_meta(tmp_path):
+    set_root_dir(tmp_path)
+
+    directory = Directory("test")
+    assert directory.meta == {"config": None, "status": "done"}
+    assert not (directory.path / "_meta.yaml").exists()
+
+    import yaml
+
+    directory.path.mkdir()
+    with open(directory.path / "_meta.yaml", "w") as f:
+        yaml.dump({"x": 2}, f)
+
+    with pytest.raises(AssertionError, match=f"meta has no config attribute"):
+        assert directory.config
+
+    with open(directory.path / "_meta.yaml", "w") as f:
+        yaml.dump({"config": 2}, f)
+
+    with pytest.raises(AssertionError, match=f"config is not a dict"):
+        assert directory.config
+
+    with open(directory.path / "_meta.yaml", "w") as f:
+        yaml.dump({"config": {"x": 1}}, f)
+
+    with pytest.raises(AssertionError, match=f"meta has no status attribute"):
+        assert directory.status
+
+    with open(directory.path / "_meta.yaml", "w") as f:
+        yaml.dump({"config": {"x": 1}, "status": 1}, f)
+
+    with pytest.raises(AssertionError, match=f"meta has non-string status"):
+        assert directory.status

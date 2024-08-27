@@ -100,7 +100,7 @@ NoneType = type(None)
 context = threading.local()
 context.enforce_config_match = True
 context.check_size_on_init = False
-context.verbosity_level = 2
+context.verbosity_level = 1
 context.delete_if_exists = False
 # context.in_memory = False
 
@@ -485,6 +485,10 @@ class Directory(metaclass=NonExistingDirectory):
     def config(self):
         return self.meta.config or self._config
 
+    @config.setter
+    def config(self, value):
+        self._override_config(value)
+
     @property
     def status(self):
         return self.meta.status
@@ -781,7 +785,7 @@ class Directory(metaclass=NonExistingDirectory):
                 level=2,
                 length_limit=25,
                 verbose=True,
-                not_exists_msg="empty",
+                not_exists_message="empty",
             )
         elif context.verbosity_level == 0:
             string = tree(
@@ -790,7 +794,7 @@ class Directory(metaclass=NonExistingDirectory):
                 level=1,
                 length_limit=0,
                 verbose=False,
-                not_exists_msg="empty",
+                not_exists_message="empty",
             )
         else:
             string = tree(
@@ -1353,6 +1357,7 @@ def _directory_from_path(cls: Directory, path: Path) -> Directory:
     """
 
     config = read_meta(path).config or {}
+
     written_type = get_scope().get(config.get("type", None), None)
 
     if path.is_file():
@@ -1925,24 +1930,23 @@ def read_meta(path: Path) -> Namespace:
             meta = yaml.load(f)
         meta = namespacify(meta)
         assert isinstance(meta, Namespace)
-        if hasattr(meta, "config"):
-            assert isinstance(meta.config, Namespace)
-        elif hasattr(meta, "spec"):  # for backwards compatibility
+        assert hasattr(meta, "config"), f"{path} meta has no config attribute"
+        assert isinstance(meta.config, Namespace), f"{path} config is not a dict"
+        if hasattr(meta, "spec"):  # for backwards compatibility
             assert isinstance(meta.spec, Namespace)
             warnings.warn(
                 f"Directory {path} has legacy `spec` attribute instead of `meta`. Please update when possible."
             )
             meta["config"] = meta.pop("spec")
-            # resp = input("Would you like to overwrite the existing config with an updated version? (y/n): ")
-            # if resp.strip().lower() == "y":
-            #     write_meta(path / "_meta.yaml", **meta)
-            assert isinstance(meta.status, str)
+        assert hasattr(meta, "status"), f"{path} meta has no status attribute"
+        assert isinstance(meta.status, str), f"{path} meta has non-string status"
         return meta
-    except:
+    except FileNotFoundError:
         return Namespace(config=None, status="done")
 
 
-def write_meta(path: Path, **kwargs):
+def write_meta(path: Path, config: Dict = None, status: str = None, **kwargs):
+    """"""
     yaml = YAML()
 
     # support dumping numpy objects
@@ -1958,9 +1962,14 @@ def write_meta(path: Path, **kwargs):
     yaml.Representer.add_multi_representer(np.ndarray, represent_numpy_array)
     yaml.Representer.add_multi_representer(np.floating, represent_numpy_float)
     yaml.Representer.add_multi_representer(np.integer, represent_numpy_int)
+
+    # This allows directory types to be dumped to yaml
+    config = _identify_elements(config)
+    kwargs = _identify_elements(kwargs)
+
     # dump config to yaml
     with open(path, "w") as f:
-        yaml.dump(_identify_elements(kwargs), f)
+        yaml.dump({"config": config, "status": status, **kwargs}, f)
 
 
 def directory_to_dict(directory: Directory) -> dict:
@@ -2009,7 +2018,8 @@ def tree(
     limit_to_directories: bool = False,
     length_limit: int = 1000,
     last_modified=False,
-    not_exists_msg="path does not exist",
+    not_exists_message="path does not exist",
+    permission_denied_message="permission denied",
     verbose=True,
 ):
     """Given a directory Path object print a visual tree structure"""
@@ -2031,25 +2041,34 @@ def tree(
         if not level:
             yield prefix + "..."
             return  # 0, stop iterating
-        if limit_to_directories:
-            contents = sorted([d for d in dir_path.iterdir() if d.is_dir()])
-        else:
-            contents = sorted(dir_path.iterdir())
+        try:
+            if limit_to_directories:
+                contents = sorted([d for d in dir_path.iterdir() if d.is_dir()])
+            else:
+                contents = sorted(dir_path.iterdir())
+        except PermissionError as e:
+            if "[Errno 1]" in str(e):
+                contents = [f"({permission_denied_message})"]
+
         pointers = [tee] * (len(contents) - 1) + [last]
         for pointer, path in zip(pointers, contents):
-            if path.is_dir():
-                yield prefix + pointer + path.name + "/"
-                directories += 1
-                extension = branch if pointer == tee else space
-                yield from inner(path, prefix=prefix + extension, level=level - 1)
-            elif not limit_to_directories:
-                yield prefix + pointer + path.name
-                files += 1
+            if isinstance(path, Path):
+                if path.is_dir():
+                    yield prefix + pointer + path.name + "/"
+                    directories += 1
+                    extension = branch if pointer == tee else space
+                    yield from inner(path, prefix=prefix + extension, level=level - 1)
+                elif not limit_to_directories:
+                    yield prefix + pointer + path.name
+                    files += 1
+            else:
+                assert path == f"({permission_denied_message})"
+                yield prefix + pointer + path
 
     tree_string += dir_path.name + "/"
 
     if not dir_path.exists():
-        tree_string += f"\n{space}({not_exists_msg})"
+        tree_string += f"\n{space}({not_exists_message})"
         return tree_string
 
     if last_modified:
