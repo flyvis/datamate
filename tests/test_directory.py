@@ -26,6 +26,7 @@ from datamate.directory import (
     _auto_doc,
     H5Reader,
     DirectoryDiff,
+    read_meta,
 )
 from datamate import directory
 from datamate.namespaces import namespacify
@@ -1310,3 +1311,20 @@ def test_read_meta(tmp_path):
 
     with pytest.raises(AssertionError, match=f"meta has non-string status"):
         assert directory.status
+
+
+def test_write_config(tmp_path):
+
+    set_root_dir(tmp_path)
+
+    directory = Directory("test")
+    directory.path.mkdir()
+    assert directory.meta == {"config": None, "status": "done"}
+    assert not (directory.path / "_meta.yaml").exists()
+
+    with pytest.warns(ConfigWarning):
+        directory.config = {"x": 2}
+
+    assert read_meta(directory.path).config.to_dict() == {"x": 2}
+    assert read_meta(directory.path).status == "manually written"
+    assert directory.config == {"x": 2}

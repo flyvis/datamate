@@ -487,7 +487,8 @@ class Directory(metaclass=NonExistingDirectory):
 
     @config.setter
     def config(self, value):
-        self._override_config(value)
+        # unreachable code executred in setattr
+        self.__manual_config(value)
 
     @property
     def status(self):
@@ -838,6 +839,10 @@ class Directory(metaclass=NonExistingDirectory):
         if key.startswith("__") and key.endswith("__"):
             object.__setattr__(self, key, value)
             return
+        # allow manual config writing
+        if key == "config":
+            self.__manual_config(value)
+            return
         self.__setitem__(key.replace("__", "."), value)
 
     def __delattr__(self, key: str) -> None:
@@ -867,7 +872,7 @@ class Directory(metaclass=NonExistingDirectory):
 
     # -- Convenience methods
 
-    def _override_config(self, config, status=None):
+    def __manual_config(self, config, status=None):
         """Overriding config stored in _meta.yaml.
 
         config (Dict): update for meta.config
@@ -877,6 +882,7 @@ class Directory(metaclass=NonExistingDirectory):
         meta_path = self.path / "_meta.yaml"
 
         current_config = self.config
+        config = namespacify(config)
         if current_config is not None:
             with warnings.catch_warnings():
                 warnings.simplefilter("always")
@@ -888,7 +894,7 @@ class Directory(metaclass=NonExistingDirectory):
                     ConfigWarning,
                     stacklevel=2,
                 )
-            write_meta(path=meta_path, config=config, status="overridden")
+            write_meta(path=meta_path, config=config, status="manually written")
         else:
             write_meta(path=meta_path, config=config, status=status or self.status)
 
