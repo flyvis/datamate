@@ -1947,7 +1947,7 @@ def read_meta(path: Path) -> Namespace:
         assert hasattr(meta, "status"), f"{path} meta has no status attribute"
         assert isinstance(meta.status, str), f"{path} meta has non-string status"
         return meta
-    except FileNotFoundError:
+    except (FileNotFoundError, NotADirectoryError):
         return Namespace(config=None, status="done")
 
 
