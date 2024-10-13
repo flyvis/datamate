@@ -20,7 +20,8 @@ dependencies = [
     "pandas",
     "typing_extensions",
     "h5py>=3.6.0",
-    "ruamel.yaml"
+    "ruamel.yaml",
+    "PyYAML"
 ]
 
 
