@@ -1328,3 +1328,34 @@ def test_write_config(tmp_path):
     assert read_meta(directory.path).config.to_dict() == {"x": 2}
     assert read_meta(directory.path).status == "manually written"
     assert directory.config == {"x": 2}
+
+
+def test_root_precedence(tmp_path):
+
+    @root(tmp_path / "test_dir", precedence=3)
+    class MyDir(Directory):
+
+        def __init__(self, file: str = "test", a=1, b=2) -> None:
+            assert str(self.path.parent / file).endswith(file)
+            self.file = bytes(file, "utf-8")
+
+    with set_root_context(tmp_path / "other_dir"):
+        dir = MyDir()
+        assert dir.path.name.split(".")[-1] == "MyDir_0000"
+        assert dir.file[()] == b"test"
+        assert dir.path.parent.name == "test_dir"
+
+    set_root_dir(tmp_path / "other_dir")
+    dir = MyDir(file="test2", a=3, b=2)
+    assert dir.file[()] == b"test2"
+    assert dir.path.parent.name == "test_dir"
+
+    with set_root_context(tmp_path / "test_dir"):
+        dir = MyDir(dict(file="test2", a=3, b=1))
+        assert dir.file[()] == b"test2"
+        assert dir.path.parent.name == "test_dir"
+
+    set_root_dir(tmp_path / "test_dir")
+    dir = MyDir(**dict(file="test2", a=0, b=3))
+    assert dir.file[()] == b"test2"
+    assert dir.path.parent.name == "test_dir"

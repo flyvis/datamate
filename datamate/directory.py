@@ -31,6 +31,8 @@ from typing import (
     Union,
     cast,
     get_origin,
+    Literal,
+    runtime_checkable,
 )
 from typing_extensions import Protocol
 import datetime
@@ -82,14 +84,19 @@ class ImplementationError(Exception):
 # -- Static type definitions ---------------------------------------------------
 
 
+@runtime_checkable
 class ArrayFile(Protocol):
     """
-    A property that corresponds to a single-array HDF5 file
+    A protocol that corresponds to a single-array HDF5 file
     """
 
-    def __get__(self, obj: object, type_: Optional[type]) -> h5.Dataset: ...
+    path: Path
+    shape: Tuple[int, ...]
+    dtype: np.dtype
 
-    def __set__(self, obj: object, val: object) -> None: ...
+    def __getitem__(self, key) -> Any: ...
+    def __len__(self) -> int: ...
+    def __getattr__(self, key: str) -> Any: ...
 
 
 NoneType = type(None)
@@ -119,28 +126,28 @@ def get_root_dir() -> Path:
     return getattr(context, "root_dir", Path("."))
 
 
-def root(root_dir: Union[str, Path, NoneType] = None):
+def root(root_dir: Union[str, Path, NoneType] = None, precedence: Literal[1, 2, 3] = 2):
     """Decorates a callable to fix its individual root directory.
 
-    root_dir: optional root directory that will be set at execution of the
-        callable. Optional. Default is None which corresponds to get_root_dir().
+    Args:
+        root_dir: Optional root directory that will be set at execution of the
+            callable. Default is None which corresponds to get_root_dir().
+        precedence: Integer determining the precedence of this root setting.
+            1: Lowest - global and context settings override this.
+            2: Medium - overrides global but not context settings (default).
+            3: Highest - overrides both global and context settings.
 
     Example:
-        @root("/path/to/this/individual/dir")
+        @root("/path/to/this/individual/dir", precedence=3)
         class MyDirectory(Directory):
             ...
 
         dir = MyDirectory(...)
         dir.path.parent == "/path/to/this/individual/dir"
 
-    Note, when decorating with `root`, the decorator has
-    precedence over changing the root dir with `set_root_dir` in the outer scope.
-    However, to still change the root directory for a decorated callable from
-    an outer scope, use `set_root_context` instead.
-
-    Example:
-        with set_root_context(new_dir):
-            dir = MyDirectory(...)
+    Note:
+        The precedence determines how this decorator interacts with `set_root_dir`
+        and `set_root_context`. Higher precedence values take priority.
     """
 
     def decorator(callable):
@@ -150,15 +157,13 @@ def root(root_dir: Union[str, Path, NoneType] = None):
             def function(*args, **kwargs):
                 _root_dir = get_root_dir()
                 within_context = getattr(context, "within_root_context", False)
-                # case 1: root_dir provided
-                if root_dir is not None and not within_context:
-                    set_root_dir(root_dir)
-                # case 2: root_dir provided and not within context
-                # case 3: root_dir provided and within context
-                # case 4: root dir not provided and not within context
-                # case 5: root dir not provided and within context
-                else:
-                    set_root_dir(_root_dir)
+
+                if root_dir is not None:
+                    if precedence == 3 or (precedence == 2 and not within_context):
+                        set_root_dir(root_dir)
+                    elif precedence == 1 and not within_context:
+                        set_root_dir(root_dir)
+
                 _return = callable(*args, **kwargs)
                 set_root_dir(_root_dir)
                 return _return
@@ -171,15 +176,13 @@ def root(root_dir: Union[str, Path, NoneType] = None):
             def function(*args, **kwargs):
                 _root_dir = get_root_dir()
                 within_context = getattr(context, "within_root_context", False)
-                # case 1: root_dir provided
-                if root_dir is not None and not within_context:
-                    set_root_dir(root_dir)
-                # case 2: root_dir provided and not within context
-                # case 3: root_dir provided and within context
-                # case 4: root dir not provided and not within context
-                # case 5: root dir not provided and within context
-                else:
-                    set_root_dir(_root_dir)
+
+                if root_dir is not None:
+                    if precedence == 3 or (precedence == 2 and not within_context):
+                        set_root_dir(root_dir)
+                    elif precedence == 1 and not within_context:
+                        set_root_dir(root_dir)
+
                 _return = new(*args, **kwargs)
                 set_root_dir(_root_dir)
                 return _return
@@ -188,7 +191,7 @@ def root(root_dir: Union[str, Path, NoneType] = None):
 
             return callable
         else:
-            raise ValueError
+            raise ValueError("Decorator can only be applied to functions or classes.")
 
     return decorator
 
@@ -1745,13 +1748,13 @@ def _forward_subclass(cls: type, config: object = {}) -> object:
 # -- I/O -----------------------------------------------------------------------
 
 
-class H5Reader:
+class H5Reader(ArrayFile):
     """Wrapper around h5 read operations to prevent persistent file handles
     by ensuring file handles are open only during each access operation.
     """
 
     def __init__(self, path, assert_swmr=True, n_retries=10):
-        self.path = path
+        self.path = Path(path)
         with h5.File(self.path, mode="r", libver="latest", swmr=True) as f:
             if assert_swmr:
                 assert f.swmr_mode, "File is not in SWMR mode."
