@@ -1444,7 +1444,7 @@ def _directory_from_config(cls: Directory, conf: Mapping[str, object]) -> Direct
                 continue
 
             while meta.status == "running":
-                sleep(0.01)
+                sleep(1.0)
                 meta = read_meta(path)
             if meta.status == "done":
                 object.__setattr__(directory, "path", path)
@@ -1931,24 +1931,30 @@ def _extend_file(dst: Path, src: Path) -> None:
             f_dst.write(f_src.read())
 
 
-def read_meta(path: Path) -> Namespace:
-    # TODO: Implement caching
+def read_meta(path: Path, retries=5) -> Namespace:
     try:
         yaml = YAML()
         with open(path / "_meta.yaml", "r") as f:
             meta = yaml.load(f)
         meta = namespacify(meta)
-        assert isinstance(meta, Namespace)
-        assert hasattr(meta, "config"), f"{path} meta has no config attribute"
-        assert isinstance(meta.config, Namespace), f"{path} config is not a dict"
-        if hasattr(meta, "spec"):  # for backwards compatibility
-            assert isinstance(meta.spec, Namespace)
-            warnings.warn(
-                f"Directory {path} has legacy `spec` attribute instead of `meta`. Please update when possible."
-            )
-            meta["config"] = meta.pop("spec")
-        assert hasattr(meta, "status"), f"{path} meta has no status attribute"
-        assert isinstance(meta.status, str), f"{path} meta has non-string status"
+        try:
+            assert isinstance(meta, Namespace)
+            assert hasattr(meta, "config"), f"{path} meta has no config attribute"
+            assert isinstance(meta.config, Namespace), f"{path} config is not a dict"
+            if hasattr(meta, "spec"):  # for backwards compatibility
+                assert isinstance(meta.spec, Namespace)
+                warnings.warn(
+                    f"Directory {path} has legacy `spec` attribute instead of `meta`. Please update when possible."
+                )
+                meta["config"] = meta.pop("spec")
+            assert hasattr(meta, "status"), f"{path} meta has no status attribute"
+            assert isinstance(meta.status, str), f"{path} meta has non-string status"
+        except AssertionError as e:
+            if retries > 0:
+                sleep(0.1)
+                return read_meta(path, retries=retries - 1)
+            else:
+                raise e
         return meta
     except (FileNotFoundError, NotADirectoryError):
         return Namespace(config=None, status="done")

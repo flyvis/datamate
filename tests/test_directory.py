@@ -1,3 +1,5 @@
+import multiprocessing
+import shutil
 import threading
 import time
 from pathlib import Path
@@ -7,28 +9,27 @@ import h5py as h5
 import numpy as np
 import pandas as pd
 import pytest
-import shutil
 
 from datamate import (
     Directory,
     Namespace,
-    set_root_dir,
+    directory,
     get_root_dir,
     root,
     set_root_context,
+    set_root_dir,
 )
 from datamate.directory import (
+    ConfigWarning,
+    DirectoryDiff,
+    H5Reader,
+    ImplementationError,
+    ImplementationWarning,
     ModifiedError,
     ModifiedWarning,
-    ConfigWarning,
-    ImplementationWarning,
-    ImplementationError,
     _auto_doc,
-    H5Reader,
-    DirectoryDiff,
     read_meta,
 )
-from datamate import directory
 from datamate.namespaces import namespacify
 
 # -- Helper functions ----------------------------------------------------------
@@ -1359,3 +1360,24 @@ def test_root_precedence(tmp_path):
     dir = MyDir(**dict(file="test2", a=0, b=3))
     assert dir.file[()] == b"test2"
     assert dir.path.parent.name == "test_dir"
+
+
+class ParallelDir(Directory):
+    def __init__(self, time_asleep: float = 0.05):
+        time.sleep(time_asleep)
+
+
+def create_test_dir(root_path, retry):
+    set_root_dir(root_path)
+    ParallelDir(dict(time_asleep=0.05, retry=retry))
+
+
+def test_parallel_creation(tmp_path):
+    num_instances = 50
+    num_retries = 3
+
+    for i in range(num_retries):
+        pool = multiprocessing.Pool(processes=multiprocessing.cpu_count())
+        pool.starmap(create_test_dir, [(tmp_path, i) for i in range(num_instances)])
+        pool.close()
+        pool.join()
