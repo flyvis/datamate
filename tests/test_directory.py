@@ -1,20 +1,17 @@
 import multiprocessing
-import shutil
-import threading
 import time
 from pathlib import Path
 from typing import List
 
-import h5py as h5
 import numpy as np
 import pandas as pd
 import pytest
+from ruamel.yaml import YAML
 
 from datamate import (
     Directory,
     Namespace,
     directory,
-    get_root_dir,
     root,
     set_root_context,
     set_root_dir,
@@ -23,14 +20,12 @@ from datamate.directory import (
     ConfigWarning,
     DirectoryDiff,
     H5Reader,
-    ImplementationError,
     ImplementationWarning,
-    ModifiedError,
     ModifiedWarning,
     _auto_doc,
     read_meta,
+    MetadataValidationError,
 )
-from datamate.namespaces import namespacify
 
 # -- Helper functions ----------------------------------------------------------
 
@@ -1292,30 +1287,33 @@ def test_read_meta(tmp_path):
     with open(directory.path / "_meta.yaml", "w") as f:
         yaml.dump({"x": 2}, f)
 
-    with pytest.raises(AssertionError, match=f"meta has no config attribute"):
+    with pytest.raises(
+        MetadataValidationError, match="Missing required 'config' field"
+    ):
         assert directory.config
 
     with open(directory.path / "_meta.yaml", "w") as f:
         yaml.dump({"config": 2}, f)
 
-    with pytest.raises(AssertionError, match=f"config is not a dict"):
+    with pytest.raises(MetadataValidationError, match="'config' must be a Namespace"):
         assert directory.config
 
     with open(directory.path / "_meta.yaml", "w") as f:
         yaml.dump({"config": {"x": 1}}, f)
 
-    with pytest.raises(AssertionError, match=f"meta has no status attribute"):
+    with pytest.raises(
+        MetadataValidationError, match="Missing required 'status' field"
+    ):
         assert directory.status
 
     with open(directory.path / "_meta.yaml", "w") as f:
         yaml.dump({"config": {"x": 1}, "status": 1}, f)
 
-    with pytest.raises(AssertionError, match=f"meta has non-string status"):
+    with pytest.raises(MetadataValidationError, match="'status' must be a string"):
         assert directory.status
 
 
 def test_write_config(tmp_path):
-
     set_root_dir(tmp_path)
 
     directory = Directory("test")
@@ -1332,10 +1330,8 @@ def test_write_config(tmp_path):
 
 
 def test_root_precedence(tmp_path):
-
     @root(tmp_path / "test_dir", precedence=3)
     class MyDir(Directory):
-
         def __init__(self, file: str = "test", a=1, b=2) -> None:
             assert str(self.path.parent / file).endswith(file)
             self.file = bytes(file, "utf-8")
@@ -1381,3 +1377,40 @@ def test_parallel_creation(tmp_path):
         pool.starmap(create_test_dir, [(tmp_path, i) for i in range(num_instances)])
         pool.close()
         pool.join()
+
+
+class ParentDir(Directory):
+    pass
+
+
+class InvalidConfigFieldDir(Directory):
+    class Config:
+        x: int = 2
+        y: int = 3
+
+    def __init__(self, x=2, y=3):
+        self.q = 3
+
+
+def test_copy_includes_config(tmp_path):
+    set_root_dir(tmp_path)
+
+    parent = ParentDir(tmp_path / "parent")
+
+    dir = InvalidConfigFieldDir(tmp_path / "child")
+
+    parent.child = dir
+
+    # reinitialize directory in original place
+    dir = InvalidConfigFieldDir(dir.path, config=dict(x=2, y=3))
+
+    # reinitialize directory in new place
+    dir = InvalidConfigFieldDir(parent.child.path, config=dict(x=2, y=3))
+
+    yaml = YAML()
+    # create meta file with invalid config field
+    with open(dir.path / "_meta.yaml", "w") as f:
+        yaml.dump({"config": None}, f)
+
+    with pytest.raises(MetadataValidationError, match="'config' must be a Namespace"):
+        dir = InvalidConfigFieldDir(parent.child.path, config=dict(x=2, y=3))

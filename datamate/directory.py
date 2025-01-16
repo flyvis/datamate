@@ -81,6 +81,24 @@ class ImplementationError(Exception):
     pass
 
 
+class MetadataError(ValueError):
+    """Base class for metadata-related errors."""
+
+    pass
+
+
+class MetadataParseError(MetadataError):
+    """Raised when metadata YAML cannot be parsed."""
+
+    pass
+
+
+class MetadataValidationError(MetadataError):
+    """Raised when metadata structure is invalid."""
+
+    pass
+
+
 # -- Static type definitions ---------------------------------------------------
 
 
@@ -532,7 +550,41 @@ class Directory(metaclass=NonExistingDirectory):
             yield (key, self[key])
 
     @classmethod
-    def from_df(cls, df: DataFrame, dtypes: dict, *args, **kwargs):
+    def from_df(cls, df: DataFrame, dtypes: dict, *args, **kwargs) -> "Directory":
+        """Create a Directory from a DataFrame by splitting into column arrays.
+
+        Each column is stored as a separate HDF5 array with specified dtype.
+        This is different from storing the DataFrame directly, which uses CSV format.
+
+        Args:
+            df: Source DataFrame
+            dtypes: Dictionary mapping column names to numpy dtypes
+            *args: Additional arguments passed to Directory constructor
+            **kwargs: Additional keyword arguments passed to Directory constructor
+
+        Returns:
+            Directory with each column stored as a separate array
+
+        Examples:
+            ```python
+            df = pd.DataFrame({'a': [1, 2, 3], 'b': ['x', 'y', 'z']})
+            dtypes = {'a': np.int64, 'b': 'S'}
+
+            # Store columns as separate arrays
+            dir1 = Directory.from_df(df, dtypes)
+            # Results in:
+            # dir1/
+            #   ├── a.h5  # array([1, 2, 3])
+            #   └── b.h5  # array([b'x', b'y', b'z'])
+
+            # Store as single CSV
+            dir2 = Directory()
+            dir2['data'] = df
+            # Results in:
+            # dir2/
+            #   └── data.csv
+            ```
+        """
         directory = Directory.__new__(Directory, *args, **kwargs)
         directory.update(
             {column: df[column].values.astype(dtypes[column]) for column in df.columns}
@@ -640,14 +692,23 @@ class Directory(metaclass=NonExistingDirectory):
             elif os.path.isdir(val):
                 _copy_dir(path, val)
 
-        # Write a subDirectory.
-        elif isinstance(val, (Mapping, Directory)):
+        # Write a Directory instance
+        elif isinstance(val, Directory):
+            assert path.suffix == ""
+            # Create new directory with same type and config as source
+            new_dir = type(val)(path, config=val.config)
+            MutableMapping.update(new_dir, val)
+
+        # Write a mapping as a new Directory
+        elif isinstance(val, Mapping):
             assert path.suffix == ""
             MutableMapping.update(Directory(path), val)  # type: ignore
 
         # Write a dataframe.
-        elif isinstance(val, DataFrame):
+        elif isinstance(val, pd.DataFrame):  # Use pd.DataFrame explicitly
             assert path.suffix == ""
+            if not path.parent.exists():
+                path.parent.mkdir(parents=True, exist_ok=True)
             val.to_csv(path.with_suffix(".csv"), index=False)
 
         # Write an array.
@@ -928,13 +989,25 @@ class Directory(metaclass=NonExistingDirectory):
         return check_size(self.path, warning_at, print_size)
 
     def to_df(self, dtypes: dict = None) -> DataFrame:
+        """Reconstruct a DataFrame from HDF5 column arrays in this directory.
+
+        Combines all equal-length, single-dimensional HDF5 datasets into DataFrame columns.
+        Results are cached to avoid expensive recomputation.
+
+        Args:
+            dtypes: Optional dictionary mapping column names to numpy dtypes
+
+        Returns:
+            DataFrame reconstructed from HDF5 column arrays
+
+        Note:
+            This is the complement to `from_df()`. While direct DataFrame assignment
+            stores as CSV, `from_df()` splits columns into HDF5 arrays which can be
+            recombined using this method.
         """
-        Returns a DataFrame from all equal length, single-dim .h5 datasets in self.path.
-        """
-        # to cache the dataframe that is expensive to create.
         try:
             return object.__getattribute__(self, "_as_df")
-        except:
+        except AttributeError:
             object.__setattr__(self, "_as_df", directory_to_df(self, dtypes))
             return self.to_df()
 
@@ -945,7 +1018,7 @@ class Directory(metaclass=NonExistingDirectory):
         # to cache the dict that is expensive to create.
         try:
             return object.__getattribute__(self, "_as_dict")
-        except:
+        except AttributeError:
             object.__setattr__(self, "_as_dict", directory_to_dict(self))
             return self.to_dict()
 
@@ -1063,7 +1136,7 @@ class DirectoryDiff:
                 val1 = val1[()]
                 val2 = val2[()]
                 equal = np.array_equal(val1, val2)
-                equal = equal & (type(val1) == type(val2))
+                equal = equal & isinstance(val1, type(val2))
                 equal = equal & (val1.dtype == val2.dtype)
                 if not equal:
                     diffs[self.name1].append(self._format_diff("≠", key, val1, parent))
@@ -1090,7 +1163,7 @@ def assert_equal_attributes(directory: Directory, target: Directory) -> None:
     """Assert that two directories have equal attributes."""
     if directory.path == target.path:
         return
-    assert type(directory) == type(target)
+    assert isinstance(directory, type(target))
     assert directory._config == target._config
     assert directory.meta == target.meta
     assert directory.__doc__ == target.__doc__
@@ -1467,12 +1540,12 @@ def _directory_from_path_and_config(
         config = Namespace({"type": _identify(type(directory)), **directory._config})
         if meta.config != config:
             with warnings.catch_warnings():
-                if context.enforce_config_match:
+                if context.enforce_config_match and meta.config is not None:
                     raise FileExistsError(
                         f'"{directory.path}" (incompatible config):\n'
                         f'{config.diff(meta.config, name1="passed", name2="stored")}'
                     )
-                else:
+                elif meta.config is not None:
                     warnings.simplefilter("always")
                     warnings.warn(
                         (
@@ -1708,7 +1781,7 @@ def _forward_subclass(cls: type, config: object = {}) -> object:
                     cls = getattr(cls, path)
             else:  # legacy scope management
                 cls = get_scope()[cls_override]
-        except KeyError as e:
+        except KeyError:
             cls = type(cls_override, (Directory,), {})
             with warnings.catch_warnings():
                 warnings.simplefilter("always")
@@ -1716,13 +1789,13 @@ def _forward_subclass(cls: type, config: object = {}) -> object:
                     (
                         "Casting to a new subclass of Directory because "
                         f'"{cls_override}" can\'t be resolved as it is not found'
-                        + f" inside the current scope of Directory subclasses."
+                        + " inside the current scope of Directory subclasses."
                         + " This dynamically created subclass allows to view the data"
                         + " without access to the original class definition and methods."
                         + " If this happens unexpectedly with autoreload enabled in"
                         + " a notebook/IPython session, run `datamate.reset_scope(datamate.Directory)`"
                         + " as a workaround or restart the kernel"
-                        + f" (background: https://github.com/ipython/ipython/issues/12399)."
+                        + " (background: https://github.com/ipython/ipython/issues/12399)."
                     ),
                     ConfigWarning,
                     stacklevel=2,
@@ -1911,9 +1984,23 @@ def _copy_file(dst: Path, src: Path) -> None:
 
 
 def _copy_dir(dst: Path, src: Path) -> None:
-    # shutil.rmtree(dst, ignore_errors=True)
+    """Copy a directory and its metadata.
+
+    Args:
+        dst: Destination path
+        src: Source directory path
+    """
+    # Create parent directory if needed
     dst.parent.mkdir(parents=True, exist_ok=True)
+
+    # Copy directory contents
     shutil.copytree(src, dst)
+
+    # Ensure metadata is copied correctly
+    meta_src = src / "_meta.yaml"
+    meta_dst = dst / "_meta.yaml"
+    if meta_src.exists():
+        shutil.copy2(meta_src, meta_dst)
 
 
 def _copy_if_conflict(src):
@@ -1931,32 +2018,81 @@ def _extend_file(dst: Path, src: Path) -> None:
             f_dst.write(f_src.read())
 
 
-def read_meta(path: Path, retries=5) -> Namespace:
+def read_meta(path: Path, retries: int = 5) -> Namespace:
+    """Read and validate metadata from a directory's _meta.yaml file.
+
+    Args:
+        path: Directory path containing _meta.yaml
+        retries: Number of retry attempts for transient failures
+
+    Returns:
+        Namespace containing validated metadata with config and status
+
+    Raises:
+        MetadataParseError: If YAML parsing fails
+        MetadataValidationError: If metadata structure is invalid
+        FileNotFoundError: If _meta.yaml doesn't exist (returns default metadata)
+        NotADirectoryError: If path is not a directory (returns default metadata)
+    """
+    meta_path = path / "_meta.yaml"
+
     try:
         yaml = YAML()
-        with open(path / "_meta.yaml", "r") as f:
-            meta = yaml.load(f)
+        with open(meta_path, "r") as f:
+            try:
+                meta = yaml.load(f)
+            except Exception as e:
+                raise MetadataParseError(f"Failed to parse {meta_path}: {e}") from e
+
         meta = namespacify(meta)
-        try:
-            assert isinstance(meta, Namespace)
-            assert hasattr(meta, "config"), f"{path} meta has no config attribute"
-            assert isinstance(meta.config, Namespace), f"{path} config is not a dict"
-            if hasattr(meta, "spec"):  # for backwards compatibility
-                assert isinstance(meta.spec, Namespace)
-                warnings.warn(
-                    f"Directory {path} has legacy `spec` attribute instead of `meta`. Please update when possible."
+
+        # Validate metadata structure
+        if not isinstance(meta, Namespace):
+            raise MetadataValidationError(
+                f"Metadata must be a Namespace, got {type(meta)}"
+            )
+
+        if not hasattr(meta, "config"):
+            raise MetadataValidationError(
+                f"Missing required 'config' field in {meta_path}"
+            )
+
+        if not isinstance(meta.config, Namespace):
+            raise MetadataValidationError(
+                f"'config' must be a Namespace in {meta_path}"
+            )
+
+        if not hasattr(meta, "status"):
+            raise MetadataValidationError(
+                f"Missing required 'status' field in {meta_path}"
+            )
+
+        if not isinstance(meta.status, str):
+            raise MetadataValidationError(f"'status' must be a string in {meta_path}")
+
+        # Handle legacy 'spec' field
+        if hasattr(meta, "spec"):
+            if not isinstance(meta.spec, Namespace):
+                raise MetadataValidationError(
+                    f"Legacy 'spec' must be a Namespace in {meta_path}"
                 )
-                meta["config"] = meta.pop("spec")
-            assert hasattr(meta, "status"), f"{path} meta has no status attribute"
-            assert isinstance(meta.status, str), f"{path} meta has non-string status"
-        except AssertionError as e:
-            if retries > 0:
-                sleep(0.1)
-                return read_meta(path, retries=retries - 1)
-            else:
-                raise e
+            warnings.warn(
+                f"Directory {path} uses legacy 'spec' instead of 'meta'. Please update.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            meta["config"] = meta.pop("spec")
+
         return meta
+
+    except (MetadataError, AssertionError) as e:
+        if retries > 0:
+            sleep(0.1)
+            return read_meta(path, retries=retries - 1)
+        raise e
+
     except (FileNotFoundError, NotADirectoryError):
+        # Return default metadata for non-existent or invalid paths
         return Namespace(config=None, status="done")
 
 
