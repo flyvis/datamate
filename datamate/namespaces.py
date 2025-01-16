@@ -1,12 +1,20 @@
 """
-This module exports `Namespace`, a `dict` that supports accessing items at
-attributes, for convenience, and to better support static analysis.
+Module for handling nested dictionary-like objects with attribute access support.
 
-It also exports`namespacify`, a function that recursively converts mappings and
-Namespace-like containers in JSON-like objects to `Namespace`s.
+This module provides the `Namespace` class and related utilities for working with
+nested dictionary-like objects that support both attribute and key-based access.
 """
 
-from typing import Any, Dict, List, Mapping, get_origin
+from typing import (
+    Any,
+    Dict,
+    List,
+    Mapping,
+    get_origin,
+    Iterator,
+    Union,
+    Tuple,
+)
 from copy import copy, deepcopy
 from numpy import ndarray
 from pathlib import Path
@@ -20,11 +28,21 @@ __all__ = ["Namespace", "namespacify", "is_disjoint", "is_subset", "is_superset"
 
 class Namespace(Dict[str, Any]):
     """
-    A `dict` that supports accessing items as attributes and comparison methods
-    between multiple `Namespace`s.
+    A dictionary subclass supporting both attribute and item access.
+
+    Attributes:
+        __dict__ (Dict[str, Any]): The underlying dictionary storage.
+
+    Examples:
+        ```python
+        ns = Namespace({"a": 1, "b": {"c": 2}})
+        assert ns.a == 1
+        assert ns.b.c == 2
+        ```
     """
 
     def __dir__(self) -> List[str]:
+        """Return list of valid attributes including dictionary keys."""
         return list(set([*dict.__dir__(self), *dict.__iter__(self)]))
 
     def __getattr__(self, key: str) -> Any:
@@ -94,8 +112,16 @@ class Namespace(Dict[str, Any]):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def without(self, key):
-        """Return a copy of the namespace without the specified key."""
+    def without(self, key: str) -> "Namespace":
+        """
+        Return a copy of the namespace without the specified key.
+
+        Args:
+            key: Key to remove from the namespace.
+
+        Returns:
+            New namespace without the specified key.
+        """
         _copy = self.deepcopy()
         _copy.pop(key)
         return _copy
@@ -103,16 +129,15 @@ class Namespace(Dict[str, Any]):
     def is_superset(self, other):
         return is_subset(self, other)
 
-    def is_subset(self, other):
+    def is_subset(self, other: Union[Dict, "Namespace"]) -> bool:
         """
-        Check whether dict2 is a subset of dict1.
+        Check if this namespace is a subset of another.
 
-        Parameters:
-        dict1 (dict): The superset dictionary.
-        dict2 (dict): The subset dictionary.
+        Args:
+            other: The potential superset to compare against.
 
         Returns:
-        bool: True if dict2 is a subset of dict1, False otherwise.
+            True if this namespace is a subset of other.
         """
         return is_superset(other, self)
 
@@ -131,26 +156,59 @@ class Namespace(Dict[str, Any]):
         """
         return is_disjoint(self, other_dict)
 
-    def to_df(self, name="", seperator="."):
-        """Dict to flattened dataframe."""
+    def to_df(self, name: str = "", seperator: str = ".") -> "pd.DataFrame":  # type: ignore
+        """
+        Convert namespace to flattened DataFrame.
+
+        Args:
+            name: Column name for the resulting DataFrame.
+            seperator: Character to use for separating nested keys.
+
+        Returns:
+            Flattened DataFrame representation.
+        """
         as_dict = self.to_dict()  # namespace need deepcopy method
         df = pd.json_normalize(as_dict, sep=seperator).T
         if name:
             df = df.rename({0: name}, axis=1)
         return df
 
-    def diff(self, other, name1="self", name2="other"):
-        """Diff two namespaces."""
+    def diff(
+        self, other: "Namespace", name1: str = "self", name2: str = "other"
+    ) -> "Namespace":
+        """
+        Compare two namespaces and return their differences.
+
+        Args:
+            other: The namespace to compare against.
+            name1: Label for the current namespace in the diff output.
+            name2: Label for the other namespace in the diff output.
+
+        Returns:
+            A namespace containing the differences, with + indicating additions,
+            - indicating deletions, and ≠ indicating changes.
+
+        Examples:
+            ```python
+            ns1 = Namespace({"a": 1, "b": 2})
+            ns2 = Namespace({"b": 3, "c": 4})
+            diff = ns1.diff(ns2)
+            # Returns: {
+            #   "self": ["+a: 1", "≠b: 2", "-c"],
+            #   "other": ["-a", "≠b: 3", "+c: 4"]
+            # }
+            ```
+        """
         if self is None or other is None:
-            return {name1: self, name2: other}
-        # namespacify for type coercion from array to list
+            return Namespace({name1: self, name2: other})
+
         _self = namespacify(self)
         other = namespacify(other)
-        diff1 = []
-        diff2 = []
+        diff1: List[str] = []
+        diff2: List[str] = []
         diff = {name1: diff1, name2: diff2}
 
-        def _diff(self, other, parent=""):
+        def _diff(self: Namespace, other: Namespace, parent: str = "") -> None:
             for k, v in self.items():
                 if k not in other:
                     _diff1 = f"+{parent}.{k}: {v}" if parent else f"+{k}: {v}"
@@ -159,7 +217,6 @@ class Namespace(Dict[str, Any]):
                     diff2.append(_diff2)
                 elif v == other[k]:
                     pass
-                    # diff[k] = None
                 elif isinstance(v, Namespace):
                     _parent = f"{parent}.{k}" if parent else f"{k}"
                     _diff(v, other[k], parent=_parent)
@@ -170,6 +227,7 @@ class Namespace(Dict[str, Any]):
                     )
                     diff1.append(_diff1)
                     diff2.append(_diff2)
+
             for k, v in other.items():
                 if k not in self:
                     _diff1 = f"-{parent}.{k}" if parent else f"-{k}"
@@ -180,31 +238,57 @@ class Namespace(Dict[str, Any]):
         _diff(_self, other)
         return namespacify(diff)
 
-    def walk(self):
+    def walk(self) -> Iterator[Tuple[str, Any]]:
         """
-        Recursively walk through the dictionary and yield a tuple for each
-        key-value pair.
+        Recursively walk through the namespace and yield key-value pairs.
 
         Yields:
-        tuple: A tuple containing the current key and its corresponding value.
+            Tuples of (key, value) for each item in the namespace, including nested items.
+
+        Examples:
+            ```python
+            ns = Namespace({"a": 1, "b": {"c": 2}})
+            for key, value in ns.walk():
+                print(f"{key}: {value}")
+            # Prints:
+            # a: 1
+            # b: {'c': 2}
+            # c: 2
+            ```
         """
         yield from dict_walk(self)
 
-    def equal_values(self, other):
-        "Comparison of values, nested."
-        # namespacify for type coercion from array to list
+    def equal_values(self, other: "Namespace") -> bool:
+        """
+        Compare values recursively with another namespace.
+
+        Args:
+            other: The namespace to compare against.
+
+        Returns:
+            True if all values match recursively, False otherwise.
+        """
         return compare(self, other)
 
-    def copy(self):
+    def copy(self) -> "Namespace":
+        """Create a shallow copy of the namespace."""
         return copy(self)
 
-    def deepcopy(self):
+    def deepcopy(self) -> "Namespace":
+        """Create a deep copy of the namespace."""
         return deepcopy(self)
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the namespace to a regular dictionary recursively."""
         return to_dict(self)
 
-    def depth(self):
+    def depth(self) -> int:
+        """
+        Calculate the maximum depth of nested dictionaries.
+
+        Returns:
+            The maximum nesting level, where 0 means no nesting.
+        """
         return depth(self)
 
     def pformat(self):
@@ -216,8 +300,29 @@ class Namespace(Dict[str, Any]):
 
 def namespacify(obj: object) -> Namespace:
     """
-    Recursively convert mappings (item access only) and ad-hoc Namespaces
-    (attribute access only) to `Namespace`s (both item and element access).
+    Recursively convert mappings and ad-hoc Namespaces to `Namespace` objects.
+
+    Args:
+        obj: The object to convert into a Namespace.
+
+    Returns:
+        A new Namespace object with both item and attribute access.
+
+    Raises:
+        TypeError: If the object cannot be converted to a Namespace.
+
+    Examples:
+        ```python
+        class MyClass:
+            def __init__(self):
+                self.a = 1
+                self.b = {"c": 2}
+
+        obj = MyClass()
+        ns = namespacify(obj)
+        assert ns.a == 1
+        assert ns.b.c == 2
+        ```
     """
     if isinstance(obj, (type(None), bool, int, float, str, type, bytes)):
         return obj
@@ -238,16 +343,23 @@ def namespacify(obj: object) -> Namespace:
             raise TypeError(f"namespacifying {obj} of type {type(obj)}: {e}.") from e
 
 
-def is_subset(dict1, dict2):
+def is_subset(dict1: Union[Dict, Namespace], dict2: Union[Dict, Namespace]) -> bool:
     """
     Check whether dict2 is a subset of dict1.
 
-    Parameters:
-    dict1 (dict): The superset dictionary.
-    dict2 (dict): The subset dictionary.
+    Args:
+        dict1: The superset dictionary.
+        dict2: The subset dictionary.
 
     Returns:
-    bool: True if dict2 is a subset of dict1, False otherwise.
+        True if dict2 is a subset of dict1, False otherwise.
+
+    Examples:
+        ```python
+        d1 = {"a": 1, "b": {"c": 2, "d": 3}}
+        d2 = {"b": {"c": 2}}
+        assert is_subset(d1, d2) == True
+        ```
     """
     for key, value in dict2.items():
         if key not in dict1:
@@ -261,28 +373,53 @@ def is_subset(dict1, dict2):
     return True
 
 
-def is_superset(dict1, dict2):
+def is_superset(dict1: Union[Dict, Namespace], dict2: Union[Dict, Namespace]) -> bool:
     """
     Check whether dict2 is a superset of dict1.
 
-    Parameters:
-    dict1 (dict): The subset dictionary.
-    dict2 (dict): The superset dictionary.
+    Args:
+        dict1: The subset dictionary.
+        dict2: The superset dictionary.
 
     Returns:
-    bool: True if dict2 is a superset of dict1, False otherwise.
+        True if dict2 is a superset of dict1, False otherwise.
     """
     return is_subset(dict2, dict1)
 
 
-def is_disjoint(dict1, dict2):
-    """Check whether two dictionaries are disjoint."""
+def is_disjoint(dict1: Union[Dict, Namespace], dict2: Union[Dict, Namespace]) -> bool:
+    """
+    Check whether two dictionaries are disjoint.
+
+    Args:
+        dict1: First dictionary to compare.
+        dict2: Second dictionary to compare.
+
+    Returns:
+        True if the dictionaries have no common keys at any nesting level.
+
+    Examples:
+        ```python
+        d1 = {"a": 1, "b": {"c": 2}}
+        d2 = {"d": 3, "e": {"f": 4}}
+        assert is_disjoint(d1, d2) == True
+        ```
+    """
     dict1_keys = set(key for key, _ in dict_walk(dict1))
     dict2_keys = set(key for key, _ in dict_walk(dict2))
     return dict1_keys.isdisjoint(dict2_keys)
 
 
-def to_dict(obj):
+def to_dict(obj: Any) -> Dict[str, Any]:
+    """
+    Convert a Namespace or nested structure to a regular dictionary.
+
+    Args:
+        obj: Object to convert to a dictionary.
+
+    Returns:
+        A dictionary representation of the input object.
+    """
     if isinstance(obj, dict):
         return dict((k, to_dict(v)) for k, v in obj.items())
     if isinstance(obj, list):
@@ -293,22 +430,62 @@ def to_dict(obj):
         return obj
 
 
-def depth(cls):
-    if isinstance(cls, (dict, Namespace)):
-        return 1 + (max(map(depth, cls.values())) if cls else 0)
+def depth(obj: Union[Dict, Namespace]) -> int:
+    """
+    Calculate the maximum depth of nested dictionaries.
+
+    Args:
+        obj: Dictionary or Namespace to measure depth of.
+
+    Returns:
+        Maximum nesting level, where 0 means no nesting.
+
+    Examples:
+        ```python
+        d = {"a": 1, "b": {"c": {"d": 2}}}
+        assert depth(d) == 3
+        ```
+    """
+    if isinstance(obj, (dict, Namespace)):
+        return 1 + (max(map(depth, obj.values())) if obj else 0)
     return 0
 
 
-def pformat(cls):
+def pformat(obj: Any) -> str:
+    """
+    Pretty format a Namespace or dictionary for display.
+
+    Args:
+        obj: Object to format.
+
+    Returns:
+        String representation of the object with proper indentation.
+    """
     import pprint
 
     pretty_printer = pprint.PrettyPrinter(depth=100)
-    return pretty_printer.pformat(cls)
+    return pretty_printer.pformat(obj)
 
 
-def compare(obj1, obj2):
+def compare(obj1: Any, obj2: Any) -> Union[bool, "Namespace"]:
     """
-    Type agnostic comparison (for most basic types) and nested dicts.
+    Type agnostic comparison for basic types and nested dictionaries.
+
+    Args:
+        obj1: First object to compare.
+        obj2: Second object to compare.
+
+    Returns:
+        Boolean for simple types, Namespace of comparison results for complex types.
+
+    Examples:
+        ```python
+        ns1 = Namespace({"a": 1, "b": {"c": 2}})
+        ns2 = Namespace({"a": 1, "b": {"c": 3}})
+        result = compare(ns1, ns2)
+        assert result.a == True
+        assert result.b.c == False
+        ```
     """
     if isinstance(obj1, (type(None), bool, int, float, str, type)) and isinstance(
         obj2, (type(None), bool, int, float, str, type)
@@ -332,13 +509,28 @@ def compare(obj1, obj2):
         for k in _obj1:
             out[k] = compare(_obj1[k], obj2[k])
         return Namespace(out)
-    elif type(obj1) != type(obj2):
+    elif not isinstance(obj1, type(obj2)):
         return False
 
 
-def all_true(obj: object) -> bool:
+def all_true(obj: Any) -> bool:
     """
-    Return True if bool(element) is True for all elements in nested obj.
+    Check if all elements in a nested structure evaluate to True.
+
+    Args:
+        obj: Object to evaluate, can be nested structure.
+
+    Returns:
+        True if bool(element) is True for all elements in nested obj.
+
+    Raises:
+        TypeError: If object cannot be evaluated.
+
+    Examples:
+        ```python
+        ns = Namespace({"a": True, "b": {"c": 1, "d": "text"}})
+        assert all_true(ns) == True
+        ```
     """
     if isinstance(obj, (type(None), bool, int, float, str, type, bytes)):
         return bool(obj)
@@ -357,16 +549,26 @@ def all_true(obj: object) -> bool:
             raise TypeError(f"all {obj} of type {type(obj)}: {e}.") from e
 
 
-def dict_walk(dictionary):
+def dict_walk(dictionary: Union[Dict, Namespace]) -> Iterator[Tuple[str, Any]]:
     """
-    Recursively walk through a nested dictionary and yield a tuple
-    for each key-value pair.
+    Recursively walk through a nested dictionary and yield key-value pairs.
 
-    Parameters:
-    dictionary (dict): The dictionary to walk through.
+    Args:
+        dictionary: Dictionary or Namespace to traverse.
 
     Yields:
-    tuple: A tuple containing the current key and its corresponding value.
+        Tuple of (key, value) for each item, including nested items.
+
+    Examples:
+        ```python
+        d = {"a": 1, "b": {"c": 2}}
+        for key, value in dict_walk(d):
+            print(f"{key}: {value}")
+        # Prints:
+        # a: 1
+        # b: {'c': 2}
+        # c: 2
+        ```
     """
     for key, value in dictionary.items():
         yield (key, value)

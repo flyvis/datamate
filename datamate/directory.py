@@ -4,9 +4,6 @@ into a directory.
 
 Instances of the base Directory class have methods to simplify reading/writing
 collections of arrays.
-
-This module also exports `ArrayFile` a descriptor protocol intended to be used
-as attribute type annotations within `Directory` subclass definition.
 """
 
 import os
@@ -14,11 +11,8 @@ import warnings
 import itertools
 from pathlib import Path
 import shutil
-import functools
-import threading
 from time import sleep
 import inspect
-from numbers import Number
 from typing import (
     Any,
     Iterator,
@@ -32,320 +26,96 @@ from typing import (
     cast,
     get_origin,
     Literal,
-    runtime_checkable,
+    TypeVar,
+    Protocol,
+    overload,
 )
-from typing_extensions import Protocol
 import datetime
 from traceback import format_tb
-from ruamel.yaml import YAML
 from importlib import import_module
 
 
-from contextlib import contextmanager
-
-import h5py as h5
-import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
-from datamate.namespaces import (
+from .metadata import (
+    read_meta,
+    write_meta,
+    _identify,
+)
+from .namespaces import (
     Namespace,
     namespacify,
     is_disjoint,
     is_superset,
     to_dict,
 )
+from .io import (
+    ArrayFile,
+    H5Reader,
+    _read_h5,
+    _write_h5,
+    _extend_h5,
+    _copy_file,
+    _copy_dir,
+    _extend_file,
+    directory_to_dict,
+    directory_to_df,
+)
+from .context import (
+    get_root_dir,
+    get_scope,
+    context,
+)
+from .utils import check_size, tree
+from .diff import DirectoryDiff
 
-__all__ = ["Directory", "DirectoryDiff", "ArrayFile"]
+__all__ = ["Directory"]
 
 # -- Custom Errors and Warnings ------------------------------------------------
 
 
 class ConfigWarning(Warning):
-    pass
+    """Warning raised when configuration-related issues occur.
+
+    Typically raised when overriding existing configurations or when configuration
+    validation detects potential issues.
+    """
 
 
 class ModifiedWarning(Warning):
-    pass
+    """Warning raised when attempting operations on modified directories.
+
+    Raised when trying to reuse a directory that has been modified after its
+    initial construction.
+    """
 
 
 class ModifiedError(Exception):
-    pass
+    """Error raised when modifications to a directory are not allowed.
+
+    Raised when attempting to modify a directory in a way that violates its
+    configuration or build status constraints.
+    """
 
 
 class ImplementationWarning(Warning):
-    pass
+    """Warning raised when Directory implementation issues are detected.
+
+    Typically raised when a Directory subclass implementation is missing expected
+    components or configurations.
+    """
 
 
 class ImplementationError(Exception):
-    pass
+    """Error raised when Directory implementation is invalid.
 
-
-class MetadataError(ValueError):
-    """Base class for metadata-related errors."""
-
-    pass
-
-
-class MetadataParseError(MetadataError):
-    """Raised when metadata YAML cannot be parsed."""
-
-    pass
-
-
-class MetadataValidationError(MetadataError):
-    """Raised when metadata structure is invalid."""
-
-    pass
-
-
-# -- Static type definitions ---------------------------------------------------
-
-
-@runtime_checkable
-class ArrayFile(Protocol):
-    """
-    A protocol that corresponds to a single-array HDF5 file
+    Raised when a Directory subclass implementation violates required patterns
+    or constraints.
     """
 
-    path: Path
-    shape: Tuple[int, ...]
-    dtype: np.dtype
 
-    def __getitem__(self, key) -> Any: ...
-    def __len__(self) -> int: ...
-    def __getattr__(self, key: str) -> Any: ...
-
-
-NoneType = type(None)
-
-
-# -- Root Directory directory management ----------------------------------------
-
-context = threading.local()
-context.enforce_config_match = True
-context.check_size_on_init = False
-context.verbosity_level = 1
-context.delete_if_exists = False
-# context.in_memory = False
-
-
-def set_root_dir(root_dir: Optional[Path]) -> None:
-    """
-    Set the directory in which to search for Directorys.
-    """
-    context.root_dir = Path(root_dir) if root_dir is not None else Path(".")
-
-
-def get_root_dir() -> Path:
-    """
-    Return the current Directory search directory.
-    """
-    return getattr(context, "root_dir", Path("."))
-
-
-def root(root_dir: Union[str, Path, NoneType] = None, precedence: Literal[1, 2, 3] = 2):
-    """Decorates a callable to fix its individual root directory.
-
-    Args:
-        root_dir: Optional root directory that will be set at execution of the
-            callable. Default is None which corresponds to get_root_dir().
-        precedence: Integer determining the precedence of this root setting.
-            1: Lowest - global and context settings override this.
-            2: Medium - overrides global but not context settings (default).
-            3: Highest - overrides both global and context settings.
-
-    Example:
-        @root("/path/to/this/individual/dir", precedence=3)
-        class MyDirectory(Directory):
-            ...
-
-        dir = MyDirectory(...)
-        dir.path.parent == "/path/to/this/individual/dir"
-
-    Note:
-        The precedence determines how this decorator interacts with `set_root_dir`
-        and `set_root_context`. Higher precedence values take priority.
-    """
-
-    def decorator(callable):
-        if inspect.isfunction(callable):
-
-            @functools.wraps(callable)
-            def function(*args, **kwargs):
-                _root_dir = get_root_dir()
-                within_context = getattr(context, "within_root_context", False)
-
-                if root_dir is not None:
-                    if precedence == 3 or (precedence == 2 and not within_context):
-                        set_root_dir(root_dir)
-                    elif precedence == 1 and not within_context:
-                        set_root_dir(root_dir)
-
-                _return = callable(*args, **kwargs)
-                set_root_dir(_root_dir)
-                return _return
-
-            return function
-        elif inspect.isclass(callable):
-            new = callable.__new__
-
-            @functools.wraps(callable)
-            def function(*args, **kwargs):
-                _root_dir = get_root_dir()
-                within_context = getattr(context, "within_root_context", False)
-
-                if root_dir is not None:
-                    if precedence == 3 or (precedence == 2 and not within_context):
-                        set_root_dir(root_dir)
-                    elif precedence == 1 and not within_context:
-                        set_root_dir(root_dir)
-
-                _return = new(*args, **kwargs)
-                set_root_dir(_root_dir)
-                return _return
-
-            callable.__new__ = function
-
-            return callable
-        else:
-            raise ValueError("Decorator can only be applied to functions or classes.")
-
-    return decorator
-
-
-@contextmanager
-def set_root_context(root_dir: Union[str, Path, NoneType] = None):
-    """Set root directory within a context and revert after.
-
-    Example:
-        with set_root_context(dir):
-            Directory(config)
-
-    Note, takes precendecence over all other methods to control the root
-        directory.
-    """
-    _root_dir = get_root_dir()
-    set_root_dir(root_dir)
-    context.within_root_context = True
-    try:
-        yield
-    finally:
-        set_root_dir(_root_dir)
-        context.within_root_context = False
-
-
-@contextmanager
-def delete_if_exists(enable: bool = True):
-    """Delete directory if it exists within a context and revert after.
-
-    Example:
-        with delete_if_exists():
-            Directory(config)
-
-    Note, takes precendecence over all other methods to control the root
-        directory.
-    """
-    context.delete_if_exists = enable
-    try:
-        yield
-    finally:
-        context.delete_if_exists = False
-
-
-# @contextmanager
-# def in_memory():
-#     """Set in_memory mode within a context and revert after to debug a Directory.
-#     """
-#     _in_memory = getattr(context, "in_memory", False)
-#     context.in_memory = True
-#     try:
-#         yield
-#     finally:
-#         context.in_memory = _in_memory
-
-
-def enforce_config_match(enforce: bool) -> None:
-    """
-    Enforce error if configs are not matching.
-
-    Defaults to True.
-
-    Configs are compared, when initializing a directory
-    from an existing path and configuration.
-    """
-    context.enforce_config_match = enforce
-
-
-def check_size_on_init(enforce: bool) -> None:
-    """
-    Switch size warning on/off.
-
-    Defaults to False.
-
-    Note: checking the size of a directory is slow, therefore this should
-    be used only consciously.
-    """
-    context.check_size_on_init = enforce
-
-
-def get_check_size_on_init() -> bool:
-    return context.check_size_on_init
-
-
-def set_verbosity_level(level: int) -> None:
-    """
-    Set verbosity level of representation for Directorys.
-
-    0: only the top level directory name and the last modified date are shown.
-    1: maximally 2 levels and 25 lines are represented.
-    2: all directorys and files are represented.
-
-    Defaults to 2.
-    """
-    context.verbosity_level = level
-
-
-def set_scope(scope: Optional[Dict[str, type]]) -> None:
-    """
-    Set the scope used for "type" field resolution.
-    """
-    if hasattr(context, "scope"):
-        del context.scope
-    if scope is not None:
-        context.scope = scope
-
-
-def get_scope() -> Dict[str, type]:
-    """
-    Return the scope used for "type" field resolution.
-    """
-    return context.scope if hasattr(context, "scope") else get_default_scope()
-
-
-def get_default_scope(cls: object = None) -> Dict[str, type]:
-    """
-    Return the default scope used for "type" field resolution.
-    """
-
-    def subclasses(t: type) -> Iterator[type]:
-        yield from itertools.chain([t], *map(subclasses, t.__subclasses__()))
-
-    cls = cls or Directory
-    scope: Dict[str, type] = {}
-    for t in subclasses(cls):
-        scope[t.__qualname__] = t
-    return scope
-
-
-def reset_scope(cls: object = None) -> None:
-    """
-    Reset the scope to the default scope.
-    """
-    set_scope(get_default_scope(cls))
-
-
-# -- Directorys -----------------------------------------------------------------
+# -- Directory -----------------------------------------------------------------
 
 
 class NonExistingDirectory(type):
@@ -355,73 +125,77 @@ class NonExistingDirectory(type):
         return cls.__new__(cls, *args, **kwargs)
 
 
+# Add type variables for better type safety
+T = TypeVar("T", bound="Directory")
+ConfigType = TypeVar("ConfigType", bound=Dict[str, Any])
+
+
 class Directory(metaclass=NonExistingDirectory):
-    """
-    An array- and metadata-friendly view into a directory
+    """Array- and metadata-friendly view into a directory.
 
-    Arguments:
-        path Union[str, Path]: The path at which the Directory is, or should be,
-            stored, can be relative to the current `root_dir`.
-        config Dict[str, object]: The configuration of the Directory.
-            When including a "type" field indicates the type of Directory to
-            search for and construct in the scope. Note, the config can be
-            unpacked into the constructor as keyword arguments.
+    Provides a dictionary-like interface for working with arrays and metadata stored in
+    a directory structure.
 
-    Valid constructors:
-            To auto-name Directorys relative to `root_dir`:
-            - Directory()
-            - Directory(config: Dict[str, object])
-
-            To name Directorys relative to `root_dir` or absolute:
-            - Directory(path: Union[str, Path])
-            - Directory(path: Union[str, Path], config: Dict[str, object])
-            Note, config can also be passed as keyword arguments after
-            `path`.
-
-    If __init__ is implemented, it will be called to build the Directory.
-
-    If only `path` is provided, the corresponding Directory is
-    returned. It will be empty if `path` points to an empty or nonexistent
-    directory.
-
-    If only `config` is provided, it will search the current `root_dir`
-    for a matching directory, and return a Directory pointing there if it
-    exists. Otherwise, a new Directory will be constructed at the top level of
-    the `root_dir`.
-
-    If both `path` and `config` are provided, it will return the Directory
-    at `path`, building it if necessary. If `path` points to an existing
-    directory that is not a sucessfully built Directory matching `config`, an
-    error is raised.
+    Args:
+        path: Path at which the Directory is/should be stored. Can be relative to current
+            `root_dir`.
+        config: Configuration dictionary. When including a `type` field, indicates the
+            Directory type to search for and construct.
 
     Attributes:
-        path (Path): The path at which the Directory is, or should be, stored.
-        config (Dict[str, object]): The configuration of the Directory.
+        path: Path where Directory is stored.
+            Type: `pathlib.Path`
+        config: Directory configuration.
+            Type: `Config`
+        meta: Metadata stored in `_meta.yaml`.
+            Type: `Namespace`
+        status: Build status from metadata.
+            Type: `Literal["running", "done", "stopped"]`
+        parent: Parent directory.
+            Type: `Directory`
 
-    After instantiation, Directorys act as string-keyed mutable dictionaries,
-    containing three types of entries: `ArrayFile`s, `Path`s, and other `Directory`s.
+    Valid constructors:
+        ```python
+        # Auto-name relative to root_dir:
+        Directory()
+        Directory(config={"type": "MyType"})
 
-    `ArrayFile`s are single-entry HDF5 files, in SWMR mode. Array-like numeric
-    and byte-string data (valid operands of `numpy.asarray`) written into an
-    Directory via `__setitem__`, `__setattr__`, or `extend` is stored as an array
-    file.
+        # Name relative to root_dir or absolute:
+        Directory("/path/to/dir")
+        Directory("/path/to/dir", config={"type": "MyType"})
+        ```
 
-    `Path`s are non-array files, presumed to be encoded in a format that
-    is not understood. They are written and read as normal
-    `Path`s, which support simple text and byte I/O, and can be passed to more
-    specialized libraries for further processing.
+    After instantiation, Directories act as string-keyed mutable dictionaries containing:
+    - ArrayFiles: Single-entry HDF5 files in SWMR mode
+    - Paths: Non-array files in other formats
+    - Directories: Subdirectories
 
-    `Directory` entries are returned as properly subtyped Directorys, and can be
-    created, via `__setitem__`, `__setattr__`, or `extend`, from existing
-    Directorys or (possibly nested) dictionaries of arrays.
+    Array-like numeric and byte-string data written via `__setitem__`, `__setattr__`, or
+    `extend` is stored as an array file.
+
+    Example:
+        ```python
+        # Create directory with arrays
+        dir = Directory("my_data")
+        dir["array1"] = np.array([1,2,3])
+        dir.array2 = np.array([[4,5],[6,7]])
+
+        # Access data
+        arr1 = dir["array1"]  # Returns array([1,2,3])
+        arr2 = dir.array2     # Returns array([[4,5],[6,7]])
+        ```
     """
 
     class Config(Protocol):
-        """
-        `Config` classes are intended to be interface definitions. They are
-        used to define the structure of the `config` argument to the
-        `Directory` constructor, and to provide type hints for the `config`
+        """Protocol defining the configuration interface for Directory classes.
+
+        This protocol defines the structure of the `config` argument to the
+        `Directory` constructor, and provides type hints for the `config`
         attribute of `Directory` instances.
+
+        Note:
+            Subclasses should implement this protocol to define their configuration
+            interface, or implement `__init__` with typed parameters.
         """
 
         pass
@@ -429,7 +203,20 @@ class Directory(metaclass=NonExistingDirectory):
     path: Path
     config: Config
 
-    def __new__(_type, *args: object, **kwargs: object) -> Any:
+    @overload
+    def __new__(cls: type[T]) -> T: ...
+
+    @overload
+    def __new__(cls: type[T], path: Union[str, Path]) -> T: ...
+
+    @overload
+    def __new__(cls: type[T], config: ConfigType) -> T: ...
+
+    @overload
+    def __new__(cls: type[T], path: Union[str, Path], config: ConfigType) -> T: ...
+
+    def __new__(_type: type[T], *args: object, **kwargs: object) -> T:
+        """Implementation of overloaded constructors."""
         path, config = _parse_directory_args(args, kwargs)
 
         if path is not None and isinstance(path, Path) and path.exists():
@@ -480,77 +267,119 @@ class Directory(metaclass=NonExistingDirectory):
 
         return cls
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Implement to compile `Directory` from a configuration.
 
-        Note, subclasses can either implement Config to determine the interface,
-        types and defaults of `config`, or implement `__init__` with keyword
-        arguments to determine the interface, types and defaults of `config`.
-        In case both are implemented, the config is created from the joined
-        interface of both as long as defaults are not conflicting.
+        Note:
+            Subclasses can either implement `Config` to determine the interface,
+            types and defaults of `config`, or implement `__init__` with keyword
+            arguments. If both are implemented, the config is created from the joined
+            interface as long as defaults are not conflicting.
         """
         pass
 
-    def __init_subclass__(cls, **kwargs):
+    def __init_subclass__(cls, **kwargs) -> None:
+        """Initializes a Directory subclass.
+
+        Automatically generates documentation for the subclass.
+
+        Args:
+            **kwargs: Additional keyword arguments passed to parent __init_subclass__
+        """
         super().__init_subclass__(**kwargs)
         cls.__doc__ = _auto_doc(cls)
 
     @property
     def meta(self) -> Namespace:
-        """
-        The metadata stored in `{self.path}/_meta.yaml`
-        """
+        """The metadata stored in `{self.path}/_meta.yaml`."""
         return read_meta(self.path)
 
     @property
-    def config(self):
+    def config(self) -> Config:
+        """The directory configuration."""
         return self.meta.config or self._config
 
     @config.setter
-    def config(self, value):
-        # unreachable code executred in setattr
+    def config(self, value: Config) -> None:
         self.__manual_config(value)
 
     @property
-    def status(self):
+    def status(self) -> Literal["running", "done", "stopped"]:
+        """The build status from metadata."""
         return self.meta.status
+
+    @property
+    def size(self) -> int:
+        """Total size of directory in bytes."""
+        return check_size(self.path, warning_at=float("inf"), print_size=False)
+
+    @property
+    def is_empty(self) -> bool:
+        """Whether directory contains any files."""
+        return len(self) == 0
+
+    @property
+    def modified(self) -> bool:
+        """Whether directory has been modified after initialization."""
+        return getattr(self.meta, "modified", False)
 
     # -- MutableMapping methods ----------------------------
 
     def __len__(self) -> int:
-        """
-        Returns the number of public files in `self.path`
+        """Returns the number of public files in `self.path`.
 
         Non-public files (files whose names start with "_") are not counted.
+
+        Returns:
+            Number of public files in the directory
         """
         return sum(1 for _ in self.path.glob("[!_]*"))
 
     def __iter__(self) -> Iterator[str]:
-        """
-        Yields field names corresponding to the public files in `self.path`
+        """Yields field names corresponding to the public files in `self.path`.
 
         Entries it understands (subdirectories and HDF5 files) are yielded
         without extensions. Non-public files (files whose names start with "_")
         are ignored.
+
+        Yields:
+            Field names for each public file
         """
         for p in self.path.glob("[!_]*"):
             yield p.name.rpartition(".")[0] if p.suffix in [".h5", ".csv"] else p.name
 
-    def __copy__(self):
+    def __copy__(self) -> "Directory":
+        """Creates a shallow copy of the directory.
+
+        Returns:
+            New `Directory` instance pointing to the same path
+        """
         return Directory(self.path)
 
     def __deepcopy__(self, memodict={}):
         return self.__copy__()
 
     def keys(self) -> Iterator[str]:
+        """Returns an iterator over public file names in the directory.
+
+        Returns:
+            Iterator yielding public file names
+        """
         return self.__iter__()
 
     def items(self) -> Iterator[Tuple[str, ArrayFile]]:
+        """Returns an iterator over (key, value) pairs in the directory.
+
+        Returns:
+            Iterator yielding tuples of (filename, file content)
+        """
         for key in self.keys():
             yield (key, self[key])
 
     @classmethod
-    def from_df(cls, df: DataFrame, dtypes: dict, *args, **kwargs) -> "Directory":
+    def from_df(
+        cls: type[T], df: DataFrame, dtypes: Dict[str, Any], *args, **kwargs
+    ) -> T:
         """Create a Directory from a DataFrame by splitting into column arrays.
 
         Each column is stored as a separate HDF5 array with specified dtype.
@@ -559,11 +388,11 @@ class Directory(metaclass=NonExistingDirectory):
         Args:
             df: Source DataFrame
             dtypes: Dictionary mapping column names to numpy dtypes
-            *args: Additional arguments passed to Directory constructor
-            **kwargs: Additional keyword arguments passed to Directory constructor
+            *args: Additional arguments passed to `Directory` constructor
+            **kwargs: Additional keyword arguments passed to `Directory` constructor
 
         Returns:
-            Directory with each column stored as a separate array
+            `Directory` with each column stored as a separate array
 
         Examples:
             ```python
@@ -591,44 +420,77 @@ class Directory(metaclass=NonExistingDirectory):
         )
         return directory
 
-    def update(self, other, suffix: str = "") -> None:
-        """
-        Updates self with items of other and appends an optional suffix.
+    def update(self, other: Union[Dict, "Directory"], suffix: str = "") -> None:
+        """Updates self with items of other and appends an optional suffix.
+
+        Args:
+            other: Dictionary or Directory to copy items from
+            suffix: Optional string to append to copied keys
         """
         for key in other:
             if key + suffix not in self:
                 self[key + suffix] = other[key]
 
-    def move(self, dst):
-        """Move directory to dst."""
+    def move(self, dst: Union[str, Path]) -> "Directory":
+        """Moves directory to new location.
+
+        Args:
+            dst: Destination path
+
+        Returns:
+            New `Directory` instance at the destination path
+        """
         shutil.move(self.path, dst)
         return Directory(dst)
 
-    def rmtree(self, y_n=None):
+    def rmtree(self, y_n: Optional[str] = None) -> None:
+        """Recursively deletes the directory after confirmation.
+
+        Args:
+            y_n: Optional pre-supplied confirmation ('y' or 'n'). If not provided,
+                will prompt user interactively
+        """
         reply = y_n or input(f"delete {self.path} recursively, y/n?")
         if reply.lower() == "y":
             shutil.rmtree(self.path, ignore_errors=True)
 
-    def _rebuild(self, y_n=None):
+    def _rebuild(self, y_n: Optional[str] = None) -> None:
+        """Rebuilds the directory by deleting and recreating it.
+
+        Args:
+            y_n: Optional pre-supplied confirmation ('y' or 'n'). If not provided,
+                will prompt user interactively
+        """
         self.rmtree(y_n)
         _build(self)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other: str) -> Any:
+        """Implements path-like division operator for accessing entries.
+
+        Args:
+            other: Key to access
+
+        Returns:
+            Same as `self[other]`
+        """
         return self.__getitem__(other)
 
     def __getitem__(self, key: str) -> Any:
-        """
-        Returns an `ArrayFile`, `Path`, or `Directory` corresponding to
-        `self.path/key`
+        """Returns an `ArrayFile`, `Path`, or `Directory` corresponding to `self.path/key`.
 
-        HDF5 files are returned as `ArrayFile`s, other files are returned as
-        `Path`s, and directories and nonexistent entries are returned as
-        (possibly empty) `Directory`s.
+        HDF5 files are returned as `ArrayFile`s, other files are returned as `Path`s, and
+        directories and nonexistent entries are returned as (possibly empty) `Directory`s.
 
-        Attribute access syntax is also supported, and occurrences of "__" in
-        `key` are transformed into ".", to support accessing encoded files as
-        attributes (i.e. `Directory['name.ext']` is equivalent to
-        `Directory.name__ext`).
+        Args:
+            key: Name of the entry to retrieve
+
+        Returns:
+            The requested entry as an appropriate type
+
+        Note:
+            Attribute access syntax is also supported, and occurrences of `__` in `key` are
+            transformed into `.`, to support accessing encoded files as attributes
+            (i.e. `Directory['name.ext']` is equivalent to `Directory.name__ext`).
         """
         # if context.in_memory:
         #     return object.__getattribute__(self, key)
@@ -763,11 +625,19 @@ class Directory(metaclass=NonExistingDirectory):
             shutil.rmtree(path, ignore_errors=True)
 
     def __eq__(self, other: object) -> bool:
-        """
-        Returns True if `self` and `other` are equal, False otherwise.
+        """Returns True if `self` and `other` are equal.
 
-        Two Directorys are equal if they have the same keys and the same
+        Two Directories are equal if they have the same keys and the same
         values for each key.
+
+        Args:
+            other: Object to compare against
+
+        Returns:
+            Whether the directories are equal
+
+        Raises:
+            ValueError: If comparing `Directory` with incompatible type
         """
         if not isinstance(other, Directory):
             raise ValueError(f"Cannot compare Directory to {type(other)}")
@@ -780,29 +650,43 @@ class Directory(metaclass=NonExistingDirectory):
             return diff.equal(fail=False)
 
     def __neq__(self, other: object) -> bool:
+        """Returns True if directories are not equal.
+
+        Args:
+            other: Object to compare against
+
+        Returns:
+            Whether the directories are not equal
+        """
         return not self.__eq__(other)
 
-    def diff(self, other: object) -> Dict[str, List[str]]:
-        """
-        Returns a dictionary of differences between `self` and `other`.
+    def diff(self, other: "Directory") -> Dict[str, List[str]]:
+        """Returns a dictionary of differences between this directory and another.
 
-        The dictionary has two keys, the name of `self` and the name of `other`.
-        The values are lists of strings, each string representing a difference
-        between the corresponding entries in `self` and `other`.
+        Args:
+            other: Directory to compare against
+
+        Returns:
+            Dictionary with two keys - the name of self and other. Values are lists of
+            strings describing differences between corresponding entries.
         """
         diff = DirectoryDiff(self, other)
         return diff.diff()
 
     def extend(self, key: str, val: object) -> None:
-        """
-        Extends an `ArrayFile`, `Path`, or `Directory` at `self.path/key`
+        """Extends an array, file or directory at the given key.
 
-        Extending `ArrayFile`s performs concatenation along the first axis,
-        extending `Path`s performs byte-level concatenation, and
-        extending subDirectorys extends their fields.
+        Extending arrays performs concatenation along the first axis,
+        extending files performs byte-level concatenation, and
+        extending directories extends their fields.
 
-        Files corresponding to `self[key]` are created if they do not already
-        exist.
+        Args:
+            key: Name of the entry to extend
+            val: Value to append to the existing entry. Can be `np.ndarray`, `Path`,
+                `Directory`, or `Mapping`
+
+        Note:
+            Files corresponding to `self[key]` are created if they do not already exist.
         """
         # if context.in_memory:
         #     self.__setitem__(key, np.append(self.__getitem__(key), val, axis=0))
@@ -874,12 +758,21 @@ class Directory(metaclass=NonExistingDirectory):
 
     def tree(
         self,
-        level=-1,
-        length_limit=None,
-        verbose=True,
-        last_modified=True,
-        limit_to_directories=False,
-    ):
+        level: int = -1,
+        length_limit: Optional[int] = None,
+        verbose: bool = True,
+        last_modified: bool = True,
+        limit_to_directories: bool = False,
+    ) -> None:
+        """Prints a tree representation of the directory structure.
+
+        Args:
+            level: Maximum depth to display (-1 for unlimited)
+            length_limit: Maximum number of entries to show per directory
+            verbose: Whether to show detailed information
+            last_modified: Whether to show last modification times
+            limit_to_directories: Whether to only show directories
+        """
         print(
             tree(
                 self.path,
@@ -962,7 +855,15 @@ class Directory(metaclass=NonExistingDirectory):
         else:
             write_meta(path=meta_path, config=config, status=status or self.status)
 
-    def _override_status(self, status):
+    def _override_status(self, status: Literal["running", "done", "stopped"]) -> None:
+        """Overrides the build status in metadata.
+
+        Args:
+            status: New status to set. Must be one of "running", "done", or "stopped"
+
+        Warns:
+            `ConfigWarning`: When overriding an existing status
+        """
         meta_path = self.path / "_meta.yaml"
 
         current_status = self.status
@@ -976,7 +877,17 @@ class Directory(metaclass=NonExistingDirectory):
                 )
         write_meta(path=meta_path, config=self.config, status=status)
 
-    def _modified_past_init(self, is_modified):
+    def _modified_past_init(self, is_modified: bool) -> None:
+        """Tracks if a `Directory` has been modified after initialization.
+
+        Updates the metadata file to record modification status.
+
+        Args:
+            is_modified: Whether the directory has been modified
+
+        Note:
+            This is used to warn users when attempting to reuse a modified directory.
+        """
         meta_path = self.path / "_meta.yaml"
 
         if is_modified:
@@ -984,11 +895,32 @@ class Directory(metaclass=NonExistingDirectory):
                 path=meta_path, config=self.config, status=self.status, modified=True
             )
 
-    def check_size(self, warning_at=20 * 1024**3, print_size=False) -> None:
-        """Prints the size of the directory in bytes."""
-        return check_size(self.path, warning_at, print_size)
+    def check_size(
+        self,
+        warning_at: int = 20 * 1024**3,  # 20GB
+        print_size: bool = False,
+        *,
+        raise_on_warning: bool = False,
+    ) -> int:
+        """Checks the total size of the directory.
 
-    def to_df(self, dtypes: dict = None) -> DataFrame:
+        Args:
+            warning_at: Size in bytes at which to issue a warning
+            print_size: Whether to print the directory size
+            raise_on_warning: Whether to raise exception instead of warning
+
+        Returns:
+            Total size in bytes
+
+        Raises:
+            ValueError: If directory size exceeds warning_at and raise_on_warning is True
+        """
+        size = check_size(self.path, warning_at, print_size)
+        if raise_on_warning and size > warning_at:
+            raise ValueError(f"Directory size {size} exceeds limit {warning_at}")
+        return size
+
+    def to_df(self, dtypes: Optional[Dict[str, Any]] = None) -> DataFrame:
         """Reconstruct a DataFrame from HDF5 column arrays in this directory.
 
         Combines all equal-length, single-dimensional HDF5 datasets into DataFrame columns.
@@ -998,7 +930,7 @@ class Directory(metaclass=NonExistingDirectory):
             dtypes: Optional dictionary mapping column names to numpy dtypes
 
         Returns:
-            DataFrame reconstructed from HDF5 column arrays
+            `DataFrame` reconstructed from HDF5 column arrays
 
         Note:
             This is the complement to `from_df()`. While direct DataFrame assignment
@@ -1022,14 +954,25 @@ class Directory(metaclass=NonExistingDirectory):
             object.__setattr__(self, "_as_dict", directory_to_dict(self))
             return self.to_dict()
 
-    def mtime(self):
+    def mtime(self) -> datetime.datetime:
+        """Returns the last modification time of the directory.
+
+        Returns:
+            Datetime object representing last modification time
+        """
         return datetime.datetime.fromtimestamp(self.path.stat().st_mtime)
 
     @property
-    def parent(self):
+    def parent(self) -> "Directory":
+        """The parent directory."""
         return Directory(self.path.absolute().parent)
 
     def _count(self) -> int:
+        """Counts number of existing numbered subdirectories.
+
+        Returns:
+            Number of subdirectories matching pattern '[0-9a-f]{4}'
+        """
         root = self.path
         count = 0
         for i in itertools.count():
@@ -1040,200 +983,47 @@ class Directory(metaclass=NonExistingDirectory):
                 return count
         return count
 
-    def _next(self) -> int:
+    def _next(self) -> "Directory":
+        """Creates next available numbered subdirectory.
+
+        Returns:
+            New `Directory` instance for the next available numbered subdirectory
+
+        Raises:
+            AssertionError: If the next numbered directory already exists
+        """
         root = self.path
         dst = root / f"{self._count():04x}"
         assert not dst.exists()
         return Directory(dst, self.config)
 
     def _clear_filetype(self, suffix: str) -> None:
-        """
-        Delete files ending with suffix in the current directory path
+        """Deletes all files with given suffix in the current directory.
+
+        Args:
+            suffix: File extension to match (e.g. '.h5', '.csv')
         """
         for file in self.path.iterdir():
             if file.is_file() and file.suffix == suffix:
                 file.unlink()
 
 
-# -- Directory comparison ------------------------------------------------------
-
-
-class DirectoryDiff:
-    """Compare two directories for equality or differences."""
-
-    def __init__(
-        self,
-        directory1: Directory,
-        directory2: Directory,
-        name1: str = None,
-        name2: str = None,
-    ):
-        self.directory1 = directory1
-        self.directory2 = directory2
-        self.name1 = name1 or self.directory1.path.name
-        self.name2 = name2 or self.directory2.path.name
-
-    def equal(self, fail: bool = False) -> bool:
-        """Return True if the directories are equal, False otherwise.
-
-        If fail is True, raise the AssertionError if the directories are not equal."""
-        try:
-            assert_equal_directories(self.directory1, self.directory2)
-            return True
-        except AssertionError as e:
-            if fail:
-                raise AssertionError from e
-            return False
-
-    def diff(self, invert: bool = False) -> Dict[str, List[str]]:
-        """Return a dictionary of differences between the directories."""
-        if invert:
-            return self._diff_directories(self.directory2, self.directory1)
-        return self._diff_directories(self.directory1, self.directory2)
-
-    def config_diff(self) -> Dict[str, List[str]]:
-        """Return the differences between the configurations of the directories."""
-        return self.directory1.config.diff(
-            self.directory2.config, name1=self.name1, name2=self.name2
-        )
-
-    def _diff_directories(
-        self, dir1: Directory, dir2: Directory, parent=""
-    ) -> Dict[str, List[str]]:
-        diffs = {self.name1: [], self.name2: []}
-
-        keys1 = set(dir1.keys())
-        keys2 = set(dir2.keys())
-
-        # Check for keys only in dir1
-        for key in keys1 - keys2:
-            val = dir1[key]
-            if isinstance(val, H5Reader):
-                val = val[()]
-            diffs[self.name1].append(self._format_diff("+", key, val, parent))
-            diffs[self.name2].append(self._format_diff("-", key, val, parent))
-
-        # Check for keys only in dir2
-        for key in keys2 - keys1:
-            val = dir2[key]
-            if isinstance(val, H5Reader):
-                val = val[()]
-            diffs[self.name2].append(self._format_diff("+", key, val, parent))
-            diffs[self.name1].append(self._format_diff("-", key, val, parent))
-
-        # Check for keys present in both
-        for key in keys1 & keys2:
-            val1 = dir1[key]
-            val2 = dir2[key]
-            if isinstance(val1, Directory) and isinstance(val2, Directory):
-                child_diffs = self._diff_directories(
-                    val1, val2, f"{parent}.{key}" if parent else key
-                )
-                diffs[self.name1].extend(child_diffs[self.name1])
-                diffs[self.name2].extend(child_diffs[self.name2])
-
-            elif isinstance(val1, H5Reader) and isinstance(val2, H5Reader):
-                val1 = val1[()]
-                val2 = val2[()]
-                equal = np.array_equal(val1, val2)
-                equal = equal & isinstance(val1, type(val2))
-                equal = equal & (val1.dtype == val2.dtype)
-                if not equal:
-                    diffs[self.name1].append(self._format_diff("≠", key, val1, parent))
-                    diffs[self.name2].append(self._format_diff("≠", key, val2, parent))
-
-            elif isinstance(val1, pd.DataFrame) and isinstance(val2, pd.DataFrame):
-                equal = val1.equals(val2)
-                if not equal:
-                    diffs[self.name1].append(self._format_diff("≠", key, val1, parent))
-                    diffs[self.name2].append(self._format_diff("≠", key, val2, parent))
-
-            elif val1 != val2:
-                diffs[self.name1].append(self._format_diff("≠", key, val1, parent))
-                diffs[self.name2].append(self._format_diff("≠", key, val2, parent))
-
-        return diffs
-
-    def _format_diff(self, symbol, key, value, parent):
-        full_key = f"{parent}.{key}" if parent else key
-        return f"{symbol}{full_key}: {value}"
-
-
-def assert_equal_attributes(directory: Directory, target: Directory) -> None:
-    """Assert that two directories have equal attributes."""
-    if directory.path == target.path:
-        return
-    assert isinstance(directory, type(target))
-    assert directory._config == target._config
-    assert directory.meta == target.meta
-    assert directory.__doc__ == target.__doc__
-    assert directory.path.exists() == target.path.exists()
-
-
-def assert_equal_directories(directory: Directory, target: Directory) -> None:
-    """Assert that two directories are equal."""
-    assert_equal_attributes(directory, target)
-
-    assert len(directory) == len(target)
-    assert len(list(directory)) == len(list(target))
-
-    keys1 = set(directory.keys())
-    keys2 = set(target.keys())
-    assert keys1 == keys2
-
-    for k in keys1 & keys2:
-        assert k in directory and k in target
-        assert k in list(directory) and k in list(target)
-        assert hasattr(directory, k) and hasattr(target, k)
-
-        v1 = directory[k]
-        v2 = target[k]
-
-        if isinstance(v1, Directory):
-            assert isinstance(v2, Directory)
-            assert isinstance(getattr(directory, k), Directory) and isinstance(
-                getattr(target, k), Directory
-            )
-            assert_equal_directories(v1, v2)
-            assert_equal_directories(getattr(directory, k), v1)
-            assert_equal_directories(getattr(target, k), v2)
-
-        elif isinstance(v1, Path):
-            assert isinstance(v2, Path)
-            assert isinstance(getattr(directory, k), Path) and isinstance(
-                getattr(target, k), Path
-            )
-            assert v1.read_bytes() == v2.read_bytes()
-            assert getattr(directory, k).read_bytes() == v1.read_bytes()
-            assert getattr(target, k).read_bytes() == v2.read_bytes()
-
-        elif isinstance(v1, pd.DataFrame):
-            assert isinstance(v2, pd.DataFrame)
-            assert isinstance(getattr(directory, k), pd.DataFrame) and isinstance(
-                getattr(target, k), pd.DataFrame
-            )
-            assert v1.equals(v2)
-            assert getattr(directory, k).equals(v1)
-            assert getattr(target, k).equals(v2)
-
-        else:
-            assert isinstance(v1, H5Reader)
-            assert isinstance(v2, H5Reader)
-            assert isinstance(getattr(directory, k), H5Reader) and isinstance(
-                getattr(target, k), H5Reader
-            )
-            assert np.array_equal(v1[()], v2[()])
-            assert np.array_equal(getattr(directory, k)[()], v1[()])
-            assert np.array_equal(getattr(target, k)[()], v2[()])
-            assert v1.dtype == v2.dtype
-            assert getattr(directory, k).dtype == v1.dtype
-            assert getattr(target, k).dtype == v2.dtype
-
-
 # -- Directory construction -----------------------------------------------------
 
 
-def merge(dict1, dict2):
+def merge(dict1: Dict, dict2: Dict) -> Dict:
+    """Merges two dictionaries with conflict checking.
+
+    Args:
+        dict1: First dictionary
+        dict2: Second dictionary
+
+    Returns:
+        Merged dictionary
+
+    Raises:
+        ValueError: If dictionaries have conflicting values for the same keys
+    """
     merged = {}
     if is_disjoint(dict1, dict2):
         merged.update(dict1)
@@ -1247,14 +1037,35 @@ def merge(dict1, dict2):
     return merged
 
 
-def get_defaults(cls: Directory):
+def get_defaults(cls: Directory) -> Dict[str, Any]:
+    """Gets default configuration values for a Directory class.
+
+    Merges defaults from both `Config` class and `__init__` method.
+
+    Args:
+        cls: Directory class to get defaults for
+
+    Returns:
+        Dictionary of default configuration values
+
+    Raises:
+        ValueError: If defaults from Config and __init__ conflict
+    """
     try:
         return merge(get_defaults_from_Config(cls), get_defaults_from_init(cls))
     except ValueError as e:
         raise ValueError("conflicting defaults") from e
 
 
-def get_defaults_from_Config(cls: Union[type, Directory]):
+def get_defaults_from_Config(cls: Union[type, Directory]) -> Dict[str, Any]:
+    """Gets default values from a Directory class's Config class.
+
+    Args:
+        cls: Directory class or instance to get defaults from
+
+    Returns:
+        Dictionary of default values defined in Config class
+    """
     cls = cls if isinstance(cls, type) else type(cls)
     if "Config" in cls.__dict__:
         return {
@@ -1265,7 +1076,15 @@ def get_defaults_from_Config(cls: Union[type, Directory]):
     return {}
 
 
-def get_defaults_from_init(cls: Directory):
+def get_defaults_from_init(cls: Directory) -> Dict[str, Any]:
+    """Gets default values from a Directory class's __init__ parameters.
+
+    Args:
+        cls: Directory class to get defaults from
+
+    Returns:
+        Dictionary of default values from __init__ signature
+    """
     cls = cls if isinstance(cls, type) else type(cls)
     signature = inspect.signature(cls.__init__)
     defaults = {
@@ -1276,11 +1095,29 @@ def get_defaults_from_init(cls: Directory):
     return defaults
 
 
-def get_annotations(cls: Union[type, Directory]):
+def get_annotations(cls: Union[type, Directory]) -> Dict[str, Any]:
+    """Gets type annotations for a Directory class.
+
+    Merges annotations from both `Config` class and `__init__` method.
+
+    Args:
+        cls: Directory class to get annotations for
+
+    Returns:
+        Dictionary of type annotations
+    """
     return merge(get_annotations_from_Config(cls), get_annotations_from_init(cls))
 
 
-def get_annotations_from_Config(cls: Union[type, Directory]):
+def get_annotations_from_Config(cls: Union[type, Directory]) -> Dict[str, Any]:
+    """Gets type annotations from a Directory class's Config class.
+
+    Args:
+        cls: Directory class or instance to get annotations from
+
+    Returns:
+        Dictionary of type annotations defined in Config class
+    """
     cls = cls if isinstance(cls, type) else type(cls)
     if "Config" in cls.__dict__:
         annotations = getattr(cls.Config, "__annotations__", {})
@@ -1288,7 +1125,15 @@ def get_annotations_from_Config(cls: Union[type, Directory]):
     return {}
 
 
-def get_annotations_from_init(cls: Directory):
+def get_annotations_from_init(cls: Directory) -> Dict[str, Any]:
+    """Gets type annotations from a Directory class's __init__ parameters.
+
+    Args:
+        cls: Directory class to get annotations from
+
+    Returns:
+        Dictionary of type annotations from __init__ signature
+    """
     cls = cls if isinstance(cls, type) else type(cls)
     return {k: v for k, v in cls.__init__.__annotations__.items() if v is not None}
 
@@ -1296,8 +1141,27 @@ def get_annotations_from_init(cls: Directory):
 def _parse_directory_args(
     args: Tuple[object, ...], kwargs: Mapping[str, object]
 ) -> Tuple[Optional[Path], Optional[Mapping[str, object]]]:
-    """
-    Return `(path, conf)` or raise an error.
+    """Parses constructor arguments for Directory class.
+
+    Valid signatures:
+    ```python
+    Directory()
+    Directory(config: Dict[str, object])
+    Directory(path: Path)
+    Directory(path: Path, config: Dict[str, object])
+    Directory(name: str)
+    Directory(name: str, config: Dict[str, object])
+    ```
+
+    Args:
+        args: Positional arguments
+        kwargs: Keyword arguments
+
+    Returns:
+        Tuple of (path, config)
+
+    Raises:
+        TypeError: If arguments don't match any valid signature
     """
     # ()
     if len(args) == 0 and len(kwargs) == 0:
@@ -1397,11 +1261,28 @@ def _parse_directory_args(
 
 
 def _implements_init(cls: Directory) -> bool:
-    """True if the class implements `__init__`."""
+    """Checks if a Directory class implements __init__.
+
+    Args:
+        cls: Directory class to check
+
+    Returns:
+        True if class has a non-pass __init__ implementation
+    """
     return inspect.getsource(cls.__init__).split("\n")[-2].replace(" ", "") != "pass"
 
 
-def _check_implementation(cls: Directory):
+def _check_implementation(cls: Directory) -> None:
+    """Checks if Directory subclass is properly implemented.
+
+    Verifies that classes implementing `__init__` have appropriate configuration.
+
+    Args:
+        cls: Directory class to check
+
+    Warns:
+        ImplementationWarning: If `__init__` is implemented without configuration
+    """
     defaults = get_defaults(cls)
     # check if Config only has annotations, no defaults
     annotations = get_annotations(cls)
@@ -1420,8 +1301,13 @@ def _check_implementation(cls: Directory):
 
 
 def _directory(cls: type) -> Directory:
-    """
-    Return a new Directory at the root of the file tree.
+    """Returns a new Directory at the root of the file tree.
+
+    Args:
+        cls: Directory class to instantiate
+
+    Returns:
+        New Directory instance with path at root directory
     """
     directory = _forward_subclass(cls, {})
     path = _new_directory_path(type(directory))
@@ -1684,7 +1570,17 @@ def type_signature(cls):
     return signature.format("(annotate types for auto-doc of type signature)")
 
 
-def _auto_doc(cls: type, cls_doc=True, base_doc=False):
+def _auto_doc(cls: type, cls_doc: bool = True, base_doc: bool = False) -> str:
+    """Generates automatic documentation string for a Directory class.
+
+    Args:
+        cls: Class to document
+        cls_doc: Whether to include the class's own docstring
+        base_doc: Whether to include base class docstring
+
+    Returns:
+        Combined documentation string including call signatures and type info
+    """
     docstring = "{}{}{}{}"
     if isinstance(cls, Directory):
         cls = type(cls)
@@ -1725,44 +1621,22 @@ def _new_directory_path(type_: type) -> Path:
     assert False  # for MyPy
 
 
-def check_size(path: Path, warning_at=20 * 1024**3, print_size=False) -> None:
-    """Prints the size of the directory at path and warns if it exceeds warning_at."""
-
-    def sizeof_fmt(num, suffix="B"):
-        for unit in ["", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"]:
-            if abs(num) < 1024.0:
-                return "%3.1f%s%s" % (num, unit, suffix)
-            num /= 1024.0
-        return "%.1f%s%s" % (num, "Yi", suffix)
-
-    def get_size(start_path):
-        total_size = 0
-        for dirpath, dirnames, filenames in os.walk(start_path):
-            for f in filenames:
-                fp = os.path.join(dirpath, f)
-                # skip if it is symbolic link
-                if not os.path.islink(fp):
-                    try:
-                        total_size += os.path.getsize(fp)
-                    except FileNotFoundError:
-                        pass
-        return total_size
-
-    size_in_bytes = get_size(path)
-    if print_size:
-        print(f"{sizeof_fmt(size_in_bytes)}")
-    if size_in_bytes >= warning_at:
-        with warnings.catch_warnings():
-            warnings.simplefilter("always")
-            warnings.warn(
-                f"This directory {path.name} occupies {sizeof_fmt(size_in_bytes)} of disk space.",
-                ResourceWarning,
-                stacklevel=2,
-            )
-    return size_in_bytes
-
-
 def _forward_subclass(cls: type, config: object = {}) -> object:
+    """Creates a Directory instance of the appropriate subclass.
+
+    Handles subclass forwarding based on config['type'] and creates instance
+    with merged configuration.
+
+    Args:
+        cls: Base Directory class
+        config: Configuration object or mapping
+
+    Returns:
+        New Directory instance of appropriate subclass
+
+    Warns:
+        ConfigWarning: When creating dynamic subclass due to unresolved type
+    """
     # Coerce `config` to a `dict`.
     config = dict(
         config if isinstance(config, Mapping) else getattr(config, "__dict__", {})
@@ -1816,476 +1690,3 @@ def _forward_subclass(cls: type, config: object = {}) -> object:
     config = Namespace(type=_identify(type(obj)), **default_config)
     object.__setattr__(obj, "_config", namespacify(config))
     return cast(Directory, obj)
-
-
-# -- I/O -----------------------------------------------------------------------
-
-
-class H5Reader(ArrayFile):
-    """Wrapper around h5 read operations to prevent persistent file handles
-    by ensuring file handles are open only during each access operation.
-    """
-
-    def __init__(self, path, assert_swmr=True, n_retries=10):
-        self.path = Path(path)
-        with h5.File(self.path, mode="r", libver="latest", swmr=True) as f:
-            if assert_swmr:
-                assert f.swmr_mode, "File is not in SWMR mode."
-            assert "data" in f
-            self.shape = f["data"].shape
-            self.dtype = f["data"].dtype
-        self.n_retries = n_retries
-
-    def __getitem__(self, key):
-        for retry_count in range(self.n_retries):
-            try:
-                with h5.File(self.path, mode="r", libver="latest", swmr=True) as f:
-                    data = f["data"][key]
-                break
-            except Exception as e:
-                if retry_count == self.n_retries - 1:
-                    raise e
-                sleep(0.1)
-        return data
-
-    def __len__(self):
-        return self.shape[0]
-
-    def __getattr__(self, key):
-        # get attribute from underlying h5.Dataset object
-        for retry_count in range(self.n_retries):
-            try:
-                with h5.File(self.path, mode="r", libver="latest", swmr=True) as f:
-                    value = getattr(f["data"], key, None)
-                break
-            except Exception as e:
-                if retry_count == self.n_retries - 1:
-                    raise e
-                sleep(0.1)
-        if value is None:
-            raise AttributeError(f"Attribute {key} not found.")
-        # wrap callable attributes to open file before calling function
-        if callable(value):
-
-            def safe_wrapper(*args, **kwargs):
-                # not trying `n_retries` times here, just for simplicity
-                with h5.File(self.path, mode="r", libver="latest", swmr=True) as f:
-                    output = getattr(f["data"], key)(*args, **kwargs)
-                return output
-
-            return safe_wrapper
-        # otherwise just return value
-        else:
-            return value
-
-
-def _read_h5(path: Path, assert_swmr=True) -> ArrayFile:
-    try:
-        return H5Reader(path, assert_swmr=assert_swmr)
-    except OSError as e:
-        print(f"{path}: {e}")
-        if "errno = 2" in str(e):
-            raise e
-        sleep(0.1)
-        return _read_h5(path)
-
-
-def _write_h5(path: Path, val: object) -> None:
-    val = np.asarray(val)
-    try:
-        f = h5.File(path, libver="latest", mode="w")
-        if f["data"].dtype != val.dtype:
-            raise ValueError()
-        f["data"][...] = val
-        f.swmr_mode = True
-        assert f.swmr_mode
-    except Exception:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        if path.is_dir():
-            path.rmdir()
-        elif path.exists():
-            try:
-                path.unlink()
-            except FileNotFoundError:
-                pass
-        f = h5.File(path, libver="latest", mode="w")
-        f["data"] = val
-        f.swmr_mode = True
-        assert f.swmr_mode
-    f.close()
-
-
-def _extend_h5(path: Path, val: object, retry: int = 0, max_retries: int = 50) -> None:
-    val = np.asarray(val)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    # mode='a' to read file, create otherwise
-    try:
-        f = h5.File(path, libver="latest", mode="a")
-        if "data" not in f:
-            dset = f.require_dataset(
-                name="data",
-                shape=None,
-                maxshape=(None, *val.shape[1:]),
-                dtype=val.dtype,
-                data=np.empty((0, *val.shape[1:]), val.dtype),
-                chunks=(
-                    int(np.ceil(2**12 / np.prod(val.shape[1:]))),
-                    *val.shape[1:],
-                ),
-            )
-            f.swmr_mode = True
-        else:
-            dset = f["data"]
-    except BlockingIOError as e:
-        print(e)
-        if "errno = 11" in str(e) or "errno = 35" in str(
-            e
-        ):  # 11, 35 := Reource temporarily unavailable
-            sleep(0.1)
-            if retry < max_retries:
-                _extend_h5(path, val, retry + 1, max_retries)
-            else:
-                raise RecursionError(
-                    "maximum retries to extend the dataset"
-                    " exceeded, while the resource was unavailable. Because"
-                    " the dataset is constantly locked by another thread."
-                )
-            return
-        else:
-            raise e
-
-    def _override_to_chunked(path: Path, val: object) -> None:
-        # override as chunked dataset
-        data = _read_h5(path, assert_swmr=False)[()]
-        path.unlink()
-        _extend_h5(path, data)
-        # call extend again with new value
-        _extend_h5(path, val)
-
-    if len(val) > 0:
-        try:
-            dset.resize(dset.len() + len(val), 0)
-            dset[-len(val) :] = val
-            dset.flush()
-        except TypeError as e:
-            # workaround if dataset was first created as non-chunked
-            # using __setitem__ and then extended using extend
-            if "Only chunked datasets can be resized" in str(e):
-                _override_to_chunked(path, val)
-            else:
-                raise e
-    f.close()
-
-
-def _copy_file(dst: Path, src: Path) -> None:
-    # shutil.rmtree(dst, ignore_errors=True)
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy(src, dst)
-
-
-def _copy_dir(dst: Path, src: Path) -> None:
-    """Copy a directory and its metadata.
-
-    Args:
-        dst: Destination path
-        src: Source directory path
-    """
-    # Create parent directory if needed
-    dst.parent.mkdir(parents=True, exist_ok=True)
-
-    # Copy directory contents
-    shutil.copytree(src, dst)
-
-    # Ensure metadata is copied correctly
-    meta_src = src / "_meta.yaml"
-    meta_dst = dst / "_meta.yaml"
-    if meta_src.exists():
-        shutil.copy2(meta_src, meta_dst)
-
-
-def _copy_if_conflict(src):
-    _existing_conflicts = src.parent.glob(f"{src.name}_conflict*")
-    max_count = max([int(c.name[-4:]) for c in _existing_conflicts])
-    dst = src.parent / f"{src.name}_conflict_{max_count+1:04}"
-    shutil.copytree(src, dst)
-    return dst
-
-
-def _extend_file(dst: Path, src: Path) -> None:
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    with open(src, "rb") as f_src:
-        with open(dst, "ab+") as f_dst:
-            f_dst.write(f_src.read())
-
-
-def read_meta(path: Path, retries: int = 5) -> Namespace:
-    """Read and validate metadata from a directory's _meta.yaml file.
-
-    Args:
-        path: Directory path containing _meta.yaml
-        retries: Number of retry attempts for transient failures
-
-    Returns:
-        Namespace containing validated metadata with config and status
-
-    Raises:
-        MetadataParseError: If YAML parsing fails
-        MetadataValidationError: If metadata structure is invalid
-        FileNotFoundError: If _meta.yaml doesn't exist (returns default metadata)
-        NotADirectoryError: If path is not a directory (returns default metadata)
-    """
-    meta_path = path / "_meta.yaml"
-
-    try:
-        yaml = YAML()
-        with open(meta_path, "r") as f:
-            try:
-                meta = yaml.load(f)
-            except Exception as e:
-                raise MetadataParseError(f"Failed to parse {meta_path}: {e}") from e
-
-        meta = namespacify(meta)
-
-        # Validate metadata structure
-        if not isinstance(meta, Namespace):
-            raise MetadataValidationError(
-                f"Metadata must be a Namespace, got {type(meta)}"
-            )
-
-        if not hasattr(meta, "config"):
-            raise MetadataValidationError(
-                f"Missing required 'config' field in {meta_path}"
-            )
-
-        if not isinstance(meta.config, Namespace):
-            raise MetadataValidationError(
-                f"'config' must be a Namespace in {meta_path}"
-            )
-
-        if not hasattr(meta, "status"):
-            raise MetadataValidationError(
-                f"Missing required 'status' field in {meta_path}"
-            )
-
-        if not isinstance(meta.status, str):
-            raise MetadataValidationError(f"'status' must be a string in {meta_path}")
-
-        # Handle legacy 'spec' field
-        if hasattr(meta, "spec"):
-            if not isinstance(meta.spec, Namespace):
-                raise MetadataValidationError(
-                    f"Legacy 'spec' must be a Namespace in {meta_path}"
-                )
-            warnings.warn(
-                f"Directory {path} uses legacy 'spec' instead of 'meta'. Please update.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            meta["config"] = meta.pop("spec")
-
-        return meta
-
-    except (MetadataError, AssertionError) as e:
-        if retries > 0:
-            sleep(0.1)
-            return read_meta(path, retries=retries - 1)
-        raise e
-
-    except (FileNotFoundError, NotADirectoryError):
-        # Return default metadata for non-existent or invalid paths
-        return Namespace(config=None, status="done")
-
-
-def write_meta(path: Path, config: Dict = None, status: str = None, **kwargs):
-    """"""
-    yaml = YAML()
-
-    # support dumping numpy objects
-    def represent_numpy_float(self, value):
-        return self.represent_float(float(value))
-
-    def represent_numpy_int(self, value):
-        return self.represent_int(int(value))
-
-    def represent_numpy_array(self, value):
-        return self.represent_sequence(value.tolist())
-
-    yaml.Representer.add_multi_representer(np.ndarray, represent_numpy_array)
-    yaml.Representer.add_multi_representer(np.floating, represent_numpy_float)
-    yaml.Representer.add_multi_representer(np.integer, represent_numpy_int)
-
-    # This allows directory types to be dumped to yaml
-    config = _identify_elements(config)
-    kwargs = _identify_elements(kwargs)
-
-    # dump config to yaml
-    with open(path, "w") as f:
-        yaml.dump({"config": config, "status": status, **kwargs}, f)
-
-
-def directory_to_dict(directory: Directory) -> dict:
-    dw_dict = {
-        key: getattr(directory, key)[...]
-        for key in list(directory.keys())
-        if isinstance(getattr(directory, key), H5Reader)
-    }
-    return dw_dict
-
-
-def directory_to_df(directory: Directory, dtypes: dict = None) -> DataFrame:
-    """Convert a directory to a pandas DataFrame."""
-    df_dict = {
-        key: getattr(directory, key)[...]
-        for key in list(directory.keys())
-        if isinstance(getattr(directory, key), H5Reader)
-    }
-
-    # Get the lengths of all datasets.
-    nelements = {k: len(v) or 1 for k, v in df_dict.items()}
-
-    lengths, counts = np.unique([val for val in nelements.values()], return_counts=True)
-    most_frequent_length = lengths[np.argmax(counts)]
-
-    # If there are single element datasets, just create a new column of most_frequent_length and put the value in each row.
-    if lengths.min() == 1:
-        for k, v in nelements.items():
-            if v == 1:
-                df_dict[k] = df_dict[k].repeat(most_frequent_length)
-
-    df_dict = byte_to_str(df_dict)
-
-    if dtypes is not None:
-        df_dict = {
-            k: np.array(v).astype(dtypes[k]) for k, v in df_dict.items() if k in dtypes
-        }
-    return DataFrame.from_dict(
-        {k: v.tolist() if v.ndim > 1 else v for k, v in df_dict.items()}
-    )
-
-
-def tree(
-    dir_path: Path,
-    level: int = -1,
-    limit_to_directories: bool = False,
-    length_limit: int = 1000,
-    last_modified=False,
-    not_exists_message="path does not exist",
-    permission_denied_message="permission denied",
-    verbose=True,
-):
-    """Given a directory Path object print a visual tree structure"""
-    # prefix components:
-    space = "    "
-    branch = "│   "
-    # pointers:
-    tee = "├── "
-    last = "└── "
-
-    tree_string = ""
-
-    dir_path = Path(dir_path)  # accept string coerceable to Path
-    files = 0
-    directories = 1
-
-    def inner(dir_path: Path, prefix: str = "", level=-1):
-        nonlocal files, directories
-        if not level:
-            yield prefix + "..."
-            return  # 0, stop iterating
-        try:
-            if limit_to_directories:
-                contents = sorted([d for d in dir_path.iterdir() if d.is_dir()])
-            else:
-                contents = sorted(dir_path.iterdir())
-        except PermissionError as e:
-            if "[Errno 1]" in str(e):
-                contents = [f"({permission_denied_message})"]
-
-        pointers = [tee] * (len(contents) - 1) + [last]
-        for pointer, path in zip(pointers, contents):
-            if isinstance(path, Path):
-                if path.is_dir():
-                    yield prefix + pointer + path.name + "/"
-                    directories += 1
-                    extension = branch if pointer == tee else space
-                    yield from inner(path, prefix=prefix + extension, level=level - 1)
-                elif not limit_to_directories:
-                    yield prefix + pointer + path.name
-                    files += 1
-            else:
-                assert path == f"({permission_denied_message})"
-                yield prefix + pointer + path
-
-    tree_string += dir_path.name + "/"
-
-    if not dir_path.exists():
-        tree_string += f"\n{space}({not_exists_message})"
-        return tree_string
-
-    if last_modified:
-        timestamp = datetime.datetime.fromtimestamp(dir_path.stat().st_mtime)
-        mtime = " - Last modified: {}".format(timestamp.strftime("%B %d, %Y %H:%M:%S"))
-        tree_string += mtime
-    tree_string += "\n"
-    iterator = inner(dir_path, level=level)
-    for line in itertools.islice(iterator, length_limit):
-        tree_string += line + "\n"
-
-    if verbose:
-        if next(iterator, None):
-            tree_string += f"... length_limit, {length_limit}, reached,"
-        tree_string += (
-            f"\ndisplaying: {directories} {'directory' if directories == 1 else 'directories'}"
-            + (f", {files} files" if files else "")
-            + (f", {level} levels." if level >= 1 else "")
-        )
-
-    return tree_string
-
-
-def byte_to_str(obj):
-    """Cast byte elements to string types.
-
-    Note, this function is recursive and will cast all byte elements in a nested
-    list or tuple.
-    """
-    if isinstance(obj, Mapping):
-        return type(obj)({k: byte_to_str(v) for k, v in obj.items()})
-    elif isinstance(obj, np.ndarray):
-        if np.issubdtype(obj.dtype, np.dtype("S")):
-            return obj.astype("U")
-        return obj
-    elif isinstance(obj, list):
-        obj = [byte_to_str(item) for item in obj]
-        return obj
-    elif isinstance(obj, tuple):
-        obj = tuple([byte_to_str(item) for item in obj])
-        return obj
-    elif isinstance(obj, bytes):
-        return obj.decode()
-    elif isinstance(obj, (str, Number)):
-        return obj
-    else:
-        raise TypeError(f"can't cast {obj} of type {type(obj)} to str")
-
-
-# -- Scope search --------------------------------------------------------------
-
-
-def _identify(type_: type) -> str:
-    for sym, t in get_scope().items():
-        # comparing t == type_ can yield false in combination with
-        # ipython autoreload, therefore relying on comparing the __qualname__
-        if t.__qualname__ == type_.__qualname__:
-            return sym
-
-
-def _identify_elements(obj: object) -> object:
-    if isinstance(obj, type):
-        return _identify(obj)
-    elif isinstance(obj, list):
-        return [_identify_elements(elem) for elem in obj]
-    elif isinstance(obj, dict):
-        return {k: _identify_elements(obj[k]) for k in obj}
-    else:
-        return obj

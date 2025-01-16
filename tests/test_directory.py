@@ -11,18 +11,24 @@ from ruamel.yaml import YAML
 from datamate import (
     Directory,
     Namespace,
-    directory,
     root,
     set_root_context,
     set_root_dir,
+    delete_if_exists,
 )
 from datamate.directory import (
     ConfigWarning,
-    DirectoryDiff,
-    H5Reader,
     ImplementationWarning,
     ModifiedWarning,
     _auto_doc,
+)
+from datamate.io import H5Reader
+from datamate.diff import (
+    DirectoryDiff,
+    assert_equal_attributes,
+    assert_equal_directories,
+)
+from datamate.metadata import (
     read_meta,
     MetadataValidationError,
 )
@@ -1147,7 +1153,7 @@ def test_delete_if_exists(tmp_path):
     with pytest.raises(FileExistsError):
         dir2 = DefaultConfigDir(name, config=dict(x=3))
 
-    with directory.delete_if_exists():
+    with delete_if_exists():
         dir2 = DefaultConfigDir(name, config=dict(x=3))
         assert_directory_equals(
             dir2,
@@ -1207,21 +1213,21 @@ def test_comparison(tmp_path):
 
     a = CompDir()
     b = CompDir()
-    directory.assert_equal_directories(a, b)
+    assert_equal_directories(a, b)
     assert a.path == b.path
 
     a = CompDir("a")
     b = CompDir("b")
-    directory.assert_equal_directories(a, b)
+    assert_equal_directories(a, b)
     assert a.path != b.path
 
     b = CompDir(x=3)
     with pytest.raises(AssertionError):
-        directory.assert_equal_directories(a, b)
+        assert_equal_directories(a, b)
 
     b.x = 2
     with pytest.raises(AssertionError):
-        directory.assert_equal_attributes(a, b)
+        assert_equal_attributes(a, b)
 
 
 def test_diff(tmp_path):
