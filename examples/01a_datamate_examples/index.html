@@ -1,0 +1,2508 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://flyvis.github.io/datamate/examples/01a_datamate_examples/">
+      
+      
+        <link rel="prev" href="../..">
+      
+      
+        <link rel="next" href="../01b_parallel_read_and_write/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.50">
+    
+    
+      
+        <title>datamate Examples - Datamate Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a40c8224.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../custom.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#datamate-examples" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+
+
+<header class="md-header md-header--shadow" data-md-component="header">
+    <nav class="md-header__inner md-grid" aria-label="Header">
+        <a href="../.." title="Datamate Documentation"
+            class="md-header__button md-logo" aria-label="Datamate Documentation" data-md-component="logo">
+            
+<img id="datamate-logo-light" src="../../images/datamate_logo_light.webp" alt="logo">
+<img id="datamate-logo-dark" src="../../images/datamate_logo_dark.webp" alt="logo">
+
+        </a>
+        <label class="md-header__button md-icon" for="__drawer">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+        </label>
+        <div class="md-header__title" data-md-component="header-title">
+            <div class="md-header__ellipsis">
+                <div class="md-header__topic">
+                    <span class="md-ellipsis">
+                    </span>
+                </div>
+                <div class="md-header__topic" data-md-component="header-topic">
+                    <span class="md-ellipsis">
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="white" data-md-color-accent="purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="purple"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+        
+        
+        
+        <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+        
+        
+        
+        <label class="md-header__button md-icon" for="__search">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+        
+        
+        <div class="md-header__source">
+            <a href="https://github.com/flyvis/datamate" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+        </div>
+        
+    </nav>
+    
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Datamate Documentation"
+      class="md-nav__button md-logo" aria-label="Datamate Documentation" data-md-component="logo">
+      
+<img id="datamate-logo-light" src="../../images/datamate_logo_light.webp" alt="logo">
+<img id="datamate-logo-dark" src="../../images/datamate_logo_dark.webp" alt="logo">
+
+    </a>
+    <div class="md-nav__social">
+      <div class="md-social">
+  
+    
+    
+    
+    
+    <a href="mailto:janne.lappalainen@uni-tuebingen.de?cc=jakob.macke@uni-tuebingen.de" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4l217.6 163.2c11.4 8.5 27 8.5 38.4 0l217.6-163.2c12.1-9.1 19.2-23.3 19.2-38.4 0-26.5-21.5-48-48-48zM0 176v208c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V176L294.4 339.2a63.9 63.9 0 0 1-76.8 0z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/flyvis/datamate" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8M97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.nature.com/articles/s41586-024-07939-3" target="_blank" rel="noopener" title="www.nature.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M96 96c0-35.3 28.7-64 64-64h288c35.3 0 64 28.7 64 64v320c0 35.3-28.7 64-64 64H80c-44.2 0-80-35.8-80-80V128c0-17.7 14.3-32 32-32s32 14.3 32 32v272c0 8.8 7.2 16 16 16s16-7.2 16-16zm64 24v80c0 13.3 10.7 24 24 24h112c13.3 0 24-10.7 24-24v-80c0-13.3-10.7-24-24-24H184c-13.3 0-24 10.7-24 24m208-8c0 8.8 7.2 16 16 16h48c8.8 0 16-7.2 16-16s-7.2-16-16-16h-48c-8.8 0-16 7.2-16 16m0 96c0 8.8 7.2 16 16 16h48c8.8 0 16-7.2 16-16s-7.2-16-16-16h-48c-8.8 0-16 7.2-16 16m-208 96c0 8.8 7.2 16 16 16h256c8.8 0 16-7.2 16-16s-7.2-16-16-16H176c-8.8 0-16 7.2-16 16m0 96c0 8.8 7.2 16 16 16h256c8.8 0 16-7.2 16-16s-7.2-16-16-16H176c-8.8 0-16 7.2-16 16"/></svg>
+    </a>
+  
+</div>
+    </div>
+    Datamate Documentation
+  </label>
+  
+  <div class="md-nav__source">
+    <a href="https://github.com/flyvis/datamate" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+  </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+    
+    
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+    
+    
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Examples
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    datamate Examples
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    datamate Examples
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#filesystem-as-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      Filesystem as memory
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hierarchical-data-organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hierarchical data organization
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-based-compilation-of-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration-based compilation of data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memory-persistence" class="md-nav__link">
+    <span class="md-ellipsis">
+      Memory persistence
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Memory persistence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pandas-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pandas integration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-visualize-the-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: visualize the graph
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-comparison-and-diffing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration comparison and diffing
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directory-structure-visualization-tree-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      Directory structure visualization (tree view)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parallel-readwrite-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parallel read/write operations
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01b_parallel_read_and_write/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Parallel read/write operations
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+    
+    
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    API Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/directory/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Directory
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/context/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Context
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/namespace/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Namespace
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/metadata/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Metadata
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/io/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    IO
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/diff/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Diff
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/utils/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Utils
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+    
+    
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Community
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Community
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contribute/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contributing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../acknowledgements/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Acknowledgements
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#filesystem-as-memory" class="md-nav__link">
+    <span class="md-ellipsis">
+      Filesystem as memory
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hierarchical-data-organization" class="md-nav__link">
+    <span class="md-ellipsis">
+      Hierarchical data organization
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-based-compilation-of-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration-based compilation of data
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#memory-persistence" class="md-nav__link">
+    <span class="md-ellipsis">
+      Memory persistence
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Memory persistence">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pandas-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Pandas integration
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-visualize-the-graph" class="md-nav__link">
+    <span class="md-ellipsis">
+      Example: visualize the graph
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-comparison-and-diffing" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration comparison and diffing
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directory-structure-visualization-tree-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      Directory structure visualization (tree view)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#parallel-readwrite-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Parallel read/write operations
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="datamate-examples"><code>datamate</code> Examples<a class="headerlink" href="#datamate-examples" title="Permanent link">&para;</a></h1>
+<p>Basic examples demonstrating <code>datamate</code> functionality.</p>
+<div style="position: relative; display: inline-block;">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Brainbow_%28Smith_2007%29.jpg/715px-Brainbow_%28Smith_2007%29.jpg" alt="Brainbow (Smith 2007)" style="max-width: 100%; height: auto;">
+    <div style="font-size: 12px; color: #555; margin-top: 5px;">
+        Image: "Mouse neurons labeled with fluorescent tags" by Stephen J Smith (2007), licensed under
+        <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" style="color: #007BFF;">CC BY 3.0</a>.
+    </div>
+</div>
+
+<h2 id="filesystem-as-memory">Filesystem as memory<a class="headerlink" href="#filesystem-as-memory" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">datamate</span><span class="w"> </span><span class="kn">import</span> <span class="n">Directory</span><span class="p">,</span> <span class="n">set_root_dir</span>
+
+<span class="o">%</span><span class="n">load_ext</span> <span class="n">autoreload</span>
+<span class="o">%</span><span class="n">autoreload</span> <span class="mi">2</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># we set the root directory</span>
+<span class="n">root_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span>
+<span class="n">set_root_dir</span><span class="p">(</span><span class="n">root_dir</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># we erase data from earlier execution of this notebook -- ignore this cell</span>
+<span class="k">if</span> <span class="n">root_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+    <span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+
+    <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">root_dir</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># we create a Directory instance</span>
+<span class="n">cell_measurements</span> <span class="o">=</span> <span class="n">Directory</span><span class="p">()</span>
+<span class="n">cell_measurements</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Directory_0000/
+    (empty)
+</code></pre></div>
+
+<p>We &lsquo;measure&rsquo; cell attributes: identity, x- and y-coordinates, and colors.</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># we store data by setting attributes</span>
+<span class="n">n_cells</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">cell_id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_cells</span><span class="p">)</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_cells</span><span class="p">)</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_cells</span><span class="p">)</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># we verify files with the tree-view method</span>
+<span class="c1"># (automatically called)</span>
+<span class="n">cell_measurements</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Directory_0000/ - Last modified: January 17, 2025 19:36:16
+├── _meta.yaml
+├── cell_id.h5
+├── colors.h5
+├── x.h5
+└── y.h5
+
+displaying: 1 directory, 5 files, 2 levels.
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we access data as attributes</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">cell_measurements</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">cell_measurements</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">cell_measurements</span><span class="o">.</span><span class="n">colors</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;cell location in x&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;cell location in y&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Locations and colors of </span><span class="si">{</span><span class="n">n_cells</span><span class="si">}</span><span class="s2"> cells&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;Locations and colors of 100 cells&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="../01a_datamate_examples_files/01a_datamate_examples_10_1.png" /></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># we index h5-arrays from disk without fully loading them to reduce memory load</span>
+<span class="n">start_cell_id</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">end_cell_id</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span>
+    <span class="n">cell_measurements</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="n">start_cell_id</span><span class="p">:</span><span class="n">end_cell_id</span><span class="p">],</span>
+    <span class="n">cell_measurements</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="n">start_cell_id</span><span class="p">:</span><span class="n">end_cell_id</span><span class="p">],</span>
+    <span class="n">c</span><span class="o">=</span><span class="n">cell_measurements</span><span class="o">.</span><span class="n">colors</span><span class="p">[</span><span class="n">start_cell_id</span><span class="p">:</span><span class="n">end_cell_id</span><span class="p">],</span>
+    <span class="n">s</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;cell location in x&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;cell location in y&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Locations and colors of </span><span class="si">{</span><span class="n">end_cell_id</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_cell_id</span><span class="si">}</span><span class="s2"> cells&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;Locations and colors of 50 cells&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="../01a_datamate_examples_files/01a_datamate_examples_11_1.png" /></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># we use the directory name to point to the same directory again</span>
+<span class="n">cell_measurements</span> <span class="o">=</span> <span class="n">Directory</span><span class="p">(</span><span class="s2">&quot;Directory_0000&quot;</span><span class="p">)</span>
+
+<span class="c1"># works also with specifying the root directory</span>
+<span class="c1"># cell_measurements = Directory(root_dir / &quot;Directory_0000&quot;)</span>
+
+<span class="n">cell_measurements</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Directory_0000/ - Last modified: January 17, 2025 19:36:16
+├── _meta.yaml
+├── cell_id.h5
+├── colors.h5
+├── x.h5
+└── y.h5
+
+displaying: 1 directory, 5 files, 2 levels.
+</code></pre></div>
+
+<h2 id="hierarchical-data-organization">Hierarchical data organization<a class="headerlink" href="#hierarchical-data-organization" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># we navigate upwards on the filesystem hierarchy</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">parent</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>data/ - Last modified: January 17, 2025 19:36:16
+└── Directory_0000/
+    ├── _meta.yaml
+    ├── cell_id.h5
+    ├── colors.h5
+    ├── x.h5
+    └── y.h5
+
+displaying: 2 directories, 5 files, 2 levels.
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we navigate upwards twice</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>examples/ - Last modified: January 17, 2025 19:36:16
+├── .gitignore
+├── 01a_datamate_examples.ipynb
+├── 01b_parallel_read_and_write.ipynb
+└── data/
+    └── Directory_0000/
+        ...
+
+displaying: 3 directories, 3 files, 2 levels.
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we create a pointer to a child Directory</span>
+<span class="c1"># (as long as no file/attribute with this name already exists)</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">connections</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>connections/
+    (empty)
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we `measure` a random connectivity matrix</span>
+<span class="n">connectivity_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="n">n_cells</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">connectivity_matrix</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;postsynaptic cell id&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;presynaptic cell id&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;connectivity matrix&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;connectivity matrix&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="../01a_datamate_examples_files/01a_datamate_examples_17_1.png" /></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># we store the connectivity as graph (i.e. edges) because its sparse</span>
+<span class="n">post_cell_id</span><span class="p">,</span> <span class="n">pre_cell_id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">connectivity_matrix</span><span class="p">)</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">pre_cell_id</span> <span class="o">=</span> <span class="n">pre_cell_id</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">post_cell_id</span> <span class="o">=</span> <span class="n">post_cell_id</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># the connections are now stored in our directory</span>
+<span class="n">cell_measurements</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Directory_0000/ - Last modified: January 17, 2025 19:36:16
+├── _meta.yaml
+├── cell_id.h5
+├── colors.h5
+├── connections/
+│   ├── _meta.yaml
+│   ├── post_cell_id.h5
+│   └── pre_cell_id.h5
+├── x.h5
+└── y.h5
+
+displaying: 2 directories, 8 files, 2 levels.
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we access them later from the same directory</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">connections</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>connections/ - Last modified: January 17, 2025 19:36:16
+├── _meta.yaml
+├── post_cell_id.h5
+└── pre_cell_id.h5
+
+displaying: 1 directory, 3 files, 2 levels.
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># with attribute-style access to the h5-array</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">pre_cell_id</span><span class="p">[:]</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>array([12, 39, 48, 63, 41, 82, 41, 92,  2, 28, 89, 17, 28, 30, 41, 86, 89,
+        2, 25, 76, 68, 28, 32, 46, 63, 92,  6, 42, 70, 74, 31, 12, 22, 92,
+       97,  5, 31, 45, 75,  1,  8, 57, 85, 96, 21, 27, 79, 75,  3, 21, 67,
+       81, 88, 10, 26, 93, 51, 56, 46, 57, 85, 40, 51, 69,  1, 39, 68,  7,
+       59, 78, 95,  0, 61,  9,  4,  9, 40,  0, 16, 20, 22, 76, 98,  7, 80,
+       87, 24, 53,  7, 66, 85, 26, 35, 68, 16, 42,  3, 16, 31, 52, 10, 20,
+       86, 82, 83, 89, 96, 17, 27, 39, 19, 51, 68, 71,  1, 19, 61, 77, 64,
+       87, 53, 51, 13, 73, 90, 32, 68, 83, 38, 44, 82, 24, 49, 76, 30, 88,
+       41, 61, 20, 61, 76, 81, 84, 89,  2, 36, 45, 52, 69, 71, 76,  1, 42,
+       79, 25, 42, 30, 88, 18, 37, 97, 98, 99, 97, 66,  1, 27, 57, 83, 85,
+       54, 51, 62, 52, 88, 74, 82, 89, 18, 31, 92,  3, 58, 85, 28, 70, 72,
+        9, 20, 44, 65,  5, 22, 41, 90, 96, 19, 27, 69, 84, 37,  1, 11, 45,
+       63, 17, 30, 22, 30, 42, 58, 96])
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># or composing strings following the pathlib syntax for your preference</span>
+<span class="p">(</span><span class="n">cell_measurements</span> <span class="o">/</span> <span class="s2">&quot;connections/pre_cell_id&quot;</span><span class="p">)[:]</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>array([12, 39, 48, 63, 41, 82, 41, 92,  2, 28, 89, 17, 28, 30, 41, 86, 89,
+        2, 25, 76, 68, 28, 32, 46, 63, 92,  6, 42, 70, 74, 31, 12, 22, 92,
+       97,  5, 31, 45, 75,  1,  8, 57, 85, 96, 21, 27, 79, 75,  3, 21, 67,
+       81, 88, 10, 26, 93, 51, 56, 46, 57, 85, 40, 51, 69,  1, 39, 68,  7,
+       59, 78, 95,  0, 61,  9,  4,  9, 40,  0, 16, 20, 22, 76, 98,  7, 80,
+       87, 24, 53,  7, 66, 85, 26, 35, 68, 16, 42,  3, 16, 31, 52, 10, 20,
+       86, 82, 83, 89, 96, 17, 27, 39, 19, 51, 68, 71,  1, 19, 61, 77, 64,
+       87, 53, 51, 13, 73, 90, 32, 68, 83, 38, 44, 82, 24, 49, 76, 30, 88,
+       41, 61, 20, 61, 76, 81, 84, 89,  2, 36, 45, 52, 69, 71, 76,  1, 42,
+       79, 25, 42, 30, 88, 18, 37, 97, 98, 99, 97, 66,  1, 27, 57, 83, 85,
+       54, 51, 62, 52, 88, 74, 82, 89, 18, 31, 92,  3, 58, 85, 28, 70, 72,
+        9, 20, 44, 65,  5, 22, 41, 90, 96, 19, 27, 69, 84, 37,  1, 11, 45,
+       63, 17, 30, 22, 30, 42, 58, 96])
+</code></pre></div>
+
+<h2 id="configuration-based-compilation-of-data">Configuration-based compilation of data<a class="headerlink" href="#configuration-based-compilation-of-data" title="Permanent link">&para;</a></h2>
+<p>We wrap up the code above into a coherent object that can be configured and compiled to a <code>Directory</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="kn">import</span> <span class="n">sleep</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">datamate</span><span class="w"> </span><span class="kn">import</span> <span class="n">Directory</span><span class="p">,</span> <span class="n">root</span>
+
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span>
+
+
+<span class="nd">@root</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>  <span class="c1"># this optional decorator defines the root directory</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CellMeasurements</span><span class="p">(</span><span class="n">Directory</span><span class="p">):</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_cells</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loading connectome ...&quot;</span><span class="p">)</span>
+        <span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+        <span class="c1"># store cell attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cell_id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_cells</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_cells</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_cells</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="c1"># store connectivity attributes</span>
+        <span class="n">connectivity_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="n">n_cells</span><span class="p">)</span>
+        <span class="n">pre_cell_id</span><span class="p">,</span> <span class="n">post_cell_id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">connectivity_matrix</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">pre_cell_id</span> <span class="o">=</span> <span class="n">pre_cell_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">post_cell_id</span> <span class="o">=</span> <span class="n">post_cell_id</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Stored connectome!&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># we init &#39;CellMeasurements&#39;</span>
+<span class="c1"># __init__ is only run if a directory of this type and config does not yet exist</span>
+<span class="n">cell_measurements</span> <span class="o">=</span> <span class="n">CellMeasurements</span><span class="p">()</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Loading connectome ...
+
+
+Stored connectome!
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we verify contents written by __init__</span>
+<span class="n">cell_measurements</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>CellMeasurements_0000/ - Last modified: January 17, 2025 19:36:21
+├── _meta.yaml
+├── cell_id.h5
+├── colors.h5
+├── connections/
+│   ├── _meta.yaml
+│   ├── post_cell_id.h5
+│   └── pre_cell_id.h5
+├── x.h5
+└── y.h5
+
+displaying: 2 directories, 8 files, 2 levels.
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we verify config written by __init__</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">meta</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Namespace(
+  config = Namespace(type=&#39;CellMeasurements&#39;, n_cells=100, seed=0),
+  status = &#39;done&#39;
+)
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we change the seed</span>
+<span class="c1"># we automatically get a second directory of the same type (but with different data)</span>
+<span class="n">cell_measurements_2</span> <span class="o">=</span> <span class="n">CellMeasurements</span><span class="p">(</span><span class="n">n_cells</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Loading connectome ...
+
+
+Stored connectome!
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we verify contents written by __init__</span>
+<span class="n">cell_measurements_2</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>CellMeasurements_0001/ - Last modified: January 17, 2025 19:36:26
+├── _meta.yaml
+├── cell_id.h5
+├── colors.h5
+├── connections/
+│   ├── _meta.yaml
+│   ├── post_cell_id.h5
+│   └── pre_cell_id.h5
+├── x.h5
+└── y.h5
+
+displaying: 2 directories, 8 files, 2 levels.
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we verify config written by __init__</span>
+<span class="n">cell_measurements_2</span><span class="o">.</span><span class="n">meta</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Namespace(
+  config = Namespace(type=&#39;CellMeasurements&#39;, n_cells=100, seed=42),
+  status = &#39;done&#39;
+)
+</code></pre></div>
+
+<h2 id="memory-persistence">Memory persistence<a class="headerlink" href="#memory-persistence" title="Permanent link">&para;</a></h2>
+<p>We restart the kernel and retrieve the data quickly later, using the same code and without recomputing.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="kn">import</span> <span class="n">sleep</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">datamate</span><span class="w"> </span><span class="kn">import</span> <span class="n">Directory</span><span class="p">,</span> <span class="n">root</span>
+
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span>
+
+
+<span class="nd">@root</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CellMeasurements</span><span class="p">(</span><span class="n">Directory</span><span class="p">):</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_cells</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loading connectome ...&quot;</span><span class="p">)</span>
+        <span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+
+        <span class="c1"># store cell attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cell_id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_cells</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_cells</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">n_cells</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">colors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+
+        <span class="c1"># store connectivity attributes</span>
+        <span class="n">connectivity_matrix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">n_cells</span><span class="p">,</span> <span class="n">n_cells</span><span class="p">)</span>
+        <span class="n">pre_cell_id</span><span class="p">,</span> <span class="n">post_cell_id</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">connectivity_matrix</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">pre_cell_id</span> <span class="o">=</span> <span class="n">pre_cell_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">post_cell_id</span> <span class="o">=</span> <span class="n">post_cell_id</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Stored connectome!&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># fast init because points to the directories with the same type and configuration</span>
+<span class="n">cell_measurements</span> <span class="o">=</span> <span class="n">CellMeasurements</span><span class="p">(</span><span class="n">n_cells</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">cell_measurements_2</span> <span class="o">=</span> <span class="n">CellMeasurements</span><span class="p">(</span><span class="n">n_cells</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="n">cell_measurements</span><span class="o">.</span><span class="n">config</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Namespace(type=&#39;CellMeasurements&#39;, n_cells=100, seed=0)
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="n">cell_measurements_2</span><span class="o">.</span><span class="n">config</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Namespace(type=&#39;CellMeasurements&#39;, n_cells=100, seed=42)
+</code></pre></div>
+
+<h3 id="pandas-integration">Pandas integration<a class="headerlink" href="#pandas-integration" title="Permanent link">&para;</a></h3>
+<p>We load the h5 data to a pandas dataframe for further processing.</p>
+<div class="highlight"><pre><span></span><code><span class="n">cells</span> <span class="o">=</span> <span class="n">cell_measurements</span><span class="o">.</span><span class="n">to_df</span><span class="p">()</span>
+<span class="n">connections</span> <span class="o">=</span> <span class="n">cell_measurements</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">to_df</span><span class="p">()</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="n">cells</span>
+</code></pre></div>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>x</th>
+      <th>y</th>
+      <th>colors</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>1.764052</td>
+      <td>1.883151</td>
+      <td>[0.961936378547229, 0.29214752679254885, 0.240...</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>0.400157</td>
+      <td>-1.347759</td>
+      <td>[0.10029394226549782, 0.016429629591474204, 0....</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2</td>
+      <td>0.978738</td>
+      <td>-1.270485</td>
+      <td>[0.66991654659091, 0.7851529120231378, 0.28173...</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3</td>
+      <td>2.240893</td>
+      <td>0.969397</td>
+      <td>[0.5864101661863267, 0.06395526612098112, 0.48...</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>4</td>
+      <td>1.867558</td>
+      <td>-1.173123</td>
+      <td>[0.9774951397444468, 0.8765052453165908, 0.338...</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>95</td>
+      <td>0.706573</td>
+      <td>-0.171546</td>
+      <td>[0.5887396099702882, 0.9627703198402424, 0.016...</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>96</td>
+      <td>0.010500</td>
+      <td>0.771791</td>
+      <td>[0.6964824307014501, 0.8136786497018634, 0.509...</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>97</td>
+      <td>1.785870</td>
+      <td>0.823504</td>
+      <td>[0.33396486959680916, 0.7908401632274049, 0.09...</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>98</td>
+      <td>0.126912</td>
+      <td>2.163236</td>
+      <td>[0.44203563772992527, 0.5199523745708382, 0.69...</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>99</td>
+      <td>0.401989</td>
+      <td>1.336528</td>
+      <td>[0.09088573203240946, 0.22775950153786095, 0.4...</td>
+    </tr>
+  </tbody>
+</table>
+<p>100 rows × 4 columns</p>
+</div>
+
+<div class="highlight"><pre><span></span><code><span class="n">connections</span>
+</code></pre></div>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>post_cell_id</th>
+      <th>pre_cell_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>23</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>33</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>62</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>28</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>54</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>206</th>
+      <td>8</td>
+      <td>97</td>
+    </tr>
+    <tr>
+      <th>207</th>
+      <td>35</td>
+      <td>97</td>
+    </tr>
+    <tr>
+      <th>208</th>
+      <td>9</td>
+      <td>98</td>
+    </tr>
+    <tr>
+      <th>209</th>
+      <td>81</td>
+      <td>98</td>
+    </tr>
+    <tr>
+      <th>210</th>
+      <td>97</td>
+      <td>99</td>
+    </tr>
+  </tbody>
+</table>
+<p>211 rows × 2 columns</p>
+</div>
+
+<p>We load the meta data into a pandas dataframe.</p>
+<div class="highlight"><pre><span></span><code><span class="n">cell_measurements</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">to_df</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;measurements 1&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>measurements 1</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>status</th>
+      <td>done</td>
+    </tr>
+    <tr>
+      <th>config.type</th>
+      <td>CellMeasurements</td>
+    </tr>
+    <tr>
+      <th>config.n_cells</th>
+      <td>100</td>
+    </tr>
+    <tr>
+      <th>config.seed</th>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="highlight"><pre><span></span><code><span class="n">cell_measurements_2</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">to_df</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;measurements 2&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>measurements 2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>status</th>
+      <td>done</td>
+    </tr>
+    <tr>
+      <th>config.type</th>
+      <td>CellMeasurements</td>
+    </tr>
+    <tr>
+      <th>config.n_cells</th>
+      <td>100</td>
+    </tr>
+    <tr>
+      <th>config.seed</th>
+      <td>42</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>We tabularize experiment configurations.</p>
+<div class="highlight"><pre><span></span><code><span class="n">configs</span> <span class="o">=</span> <span class="n">cell_measurements</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">to_df</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;measurements 1&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="n">cell_measurements_2</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">to_df</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;measurements 2&quot;</span><span class="p">)</span>
+<span class="p">)</span>
+<span class="n">configs</span>
+</code></pre></div>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>measurements 1</th>
+      <th>measurements 2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>status</th>
+      <td>done</td>
+      <td>done</td>
+    </tr>
+    <tr>
+      <th>config.type</th>
+      <td>CellMeasurements</td>
+      <td>CellMeasurements</td>
+    </tr>
+    <tr>
+      <th>config.n_cells</th>
+      <td>100</td>
+      <td>100</td>
+    </tr>
+    <tr>
+      <th>config.seed</th>
+      <td>0</td>
+      <td>42</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>Or, vice versa, we create a directory from a pandas DataFrame (note, must provide <a href="https://docs.h5py.org/en/stable/faq.html">h5py compatible type information</a>):</p>
+<div class="highlight"><pre><span></span><code><span class="n">configs</span>
+</code></pre></div>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>measurements 1</th>
+      <th>measurements 2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>status</th>
+      <td>done</td>
+      <td>done</td>
+    </tr>
+    <tr>
+      <th>config.type</th>
+      <td>CellMeasurements</td>
+      <td>CellMeasurements</td>
+    </tr>
+    <tr>
+      <th>config.n_cells</th>
+      <td>100</td>
+      <td>100</td>
+    </tr>
+    <tr>
+      <th>config.seed</th>
+      <td>0</td>
+      <td>42</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="highlight"><pre><span></span><code><span class="n">dtypes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;measurements 1&quot;</span><span class="p">:</span> <span class="s2">&quot;S50&quot;</span><span class="p">,</span> <span class="s2">&quot;measurements 2&quot;</span><span class="p">:</span> <span class="s2">&quot;S50&quot;</span><span class="p">}</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># we create a directory from the dataframe of configs</span>
+<span class="n">directory</span> <span class="o">=</span> <span class="n">Directory</span><span class="o">.</span><span class="n">from_df</span><span class="p">(</span><span class="n">configs</span><span class="p">,</span> <span class="n">dtypes</span><span class="p">,</span> <span class="s2">&quot;experiments_config&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="n">directory</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>experiments_config/ - Last modified: January 17, 2025 19:36:26
+├── _meta.yaml
+├── measurements 1.h5
+└── measurements 2.h5
+
+displaying: 1 directory, 3 files, 2 levels.
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="n">directory</span><span class="o">.</span><span class="n">to_df</span><span class="p">(</span><span class="n">dtypes</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;measurements 1&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;measurements 2&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">})</span>
+</code></pre></div>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>measurements 2</th>
+      <th>measurements 1</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>done</td>
+      <td>done</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>CellMeasurements</td>
+      <td>CellMeasurements</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>100</td>
+      <td>100</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>42</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<p>Alternatively, we seamlessly store and retrieve dataframes via csv files.</p>
+<div class="highlight"><pre><span></span><code><span class="n">directory</span><span class="o">.</span><span class="n">cells</span> <span class="o">=</span> <span class="n">cell_measurements</span><span class="o">.</span><span class="n">to_df</span><span class="p">()</span>
+<span class="n">directory</span><span class="o">.</span><span class="n">connections</span> <span class="o">=</span> <span class="n">connections</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># we verify the dataframes</span>
+<span class="n">directory</span><span class="o">.</span><span class="n">cells</span>
+</code></pre></div>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>x</th>
+      <th>y</th>
+      <th>colors</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>1.764052</td>
+      <td>1.883151</td>
+      <td>[0.961936378547229, 0.29214752679254885, 0.240...</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>0.400157</td>
+      <td>-1.347759</td>
+      <td>[0.10029394226549782, 0.016429629591474204, 0....</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2</td>
+      <td>0.978738</td>
+      <td>-1.270485</td>
+      <td>[0.66991654659091, 0.7851529120231378, 0.28173...</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3</td>
+      <td>2.240893</td>
+      <td>0.969397</td>
+      <td>[0.5864101661863267, 0.06395526612098112, 0.48...</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>4</td>
+      <td>1.867558</td>
+      <td>-1.173123</td>
+      <td>[0.9774951397444468, 0.8765052453165908, 0.338...</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>95</td>
+      <td>0.706573</td>
+      <td>-0.171546</td>
+      <td>[0.5887396099702882, 0.9627703198402424, 0.016...</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>96</td>
+      <td>0.010500</td>
+      <td>0.771791</td>
+      <td>[0.6964824307014501, 0.8136786497018634, 0.509...</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>97</td>
+      <td>1.785870</td>
+      <td>0.823504</td>
+      <td>[0.33396486959680916, 0.7908401632274049, 0.09...</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>98</td>
+      <td>0.126912</td>
+      <td>2.163236</td>
+      <td>[0.44203563772992527, 0.5199523745708382, 0.69...</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>99</td>
+      <td>0.401989</td>
+      <td>1.336528</td>
+      <td>[0.09088573203240946, 0.22775950153786095, 0.4...</td>
+    </tr>
+  </tbody>
+</table>
+<p>100 rows × 4 columns</p>
+</div>
+
+<div class="highlight"><pre><span></span><code><span class="n">directory</span><span class="o">.</span><span class="n">connections</span>
+</code></pre></div>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>post_cell_id</th>
+      <th>pre_cell_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>23</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>33</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>62</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>28</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>54</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>206</th>
+      <td>8</td>
+      <td>97</td>
+    </tr>
+    <tr>
+      <th>207</th>
+      <td>35</td>
+      <td>97</td>
+    </tr>
+    <tr>
+      <th>208</th>
+      <td>9</td>
+      <td>98</td>
+    </tr>
+    <tr>
+      <th>209</th>
+      <td>81</td>
+      <td>98</td>
+    </tr>
+    <tr>
+      <th>210</th>
+      <td>97</td>
+      <td>99</td>
+    </tr>
+  </tbody>
+</table>
+<p>211 rows × 2 columns</p>
+</div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we extend the dataframes</span>
+<span class="n">directory</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="s2">&quot;cells&quot;</span><span class="p">,</span> <span class="n">cell_measurements_2</span><span class="o">.</span><span class="n">to_df</span><span class="p">())</span>
+<span class="n">directory</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="s2">&quot;connections&quot;</span><span class="p">,</span> <span class="n">cell_measurements_2</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">to_df</span><span class="p">())</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># we verify the dataframes</span>
+<span class="n">directory</span><span class="o">.</span><span class="n">cells</span>
+</code></pre></div>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>cell_id</th>
+      <th>x</th>
+      <th>y</th>
+      <th>colors</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>1.764052</td>
+      <td>1.883151</td>
+      <td>[0.961936378547229, 0.29214752679254885, 0.240...</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>0.400157</td>
+      <td>-1.347759</td>
+      <td>[0.10029394226549782, 0.016429629591474204, 0....</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2</td>
+      <td>0.978738</td>
+      <td>-1.270485</td>
+      <td>[0.66991654659091, 0.7851529120231378, 0.28173...</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3</td>
+      <td>2.240893</td>
+      <td>0.969397</td>
+      <td>[0.5864101661863267, 0.06395526612098112, 0.48...</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>4</td>
+      <td>1.867558</td>
+      <td>-1.173123</td>
+      <td>[0.9774951397444468, 0.8765052453165908, 0.338...</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>195</th>
+      <td>95</td>
+      <td>-1.463515</td>
+      <td>0.385317</td>
+      <td>[0.7723183917356393, 0.5201635011119934, 0.852...</td>
+    </tr>
+    <tr>
+      <th>196</th>
+      <td>96</td>
+      <td>0.296120</td>
+      <td>-0.883857</td>
+      <td>[0.5519068387744855, 0.5609379715353863, 0.876...</td>
+    </tr>
+    <tr>
+      <th>197</th>
+      <td>97</td>
+      <td>0.261055</td>
+      <td>0.153725</td>
+      <td>[0.40348286621239704, 0.13401522845064073, 0.0...</td>
+    </tr>
+    <tr>
+      <th>198</th>
+      <td>98</td>
+      <td>0.005113</td>
+      <td>0.058209</td>
+      <td>[0.755137255673619, 0.6203095513534647, 0.7040...</td>
+    </tr>
+    <tr>
+      <th>199</th>
+      <td>99</td>
+      <td>-0.234587</td>
+      <td>-1.142970</td>
+      <td>[0.21296416150891073, 0.13637147558676976, 0.0...</td>
+    </tr>
+  </tbody>
+</table>
+<p>200 rows × 4 columns</p>
+</div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we verify the dataframes</span>
+<span class="n">directory</span><span class="o">.</span><span class="n">connections</span>
+</code></pre></div>
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>post_cell_id</th>
+      <th>pre_cell_id</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>23</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>33</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>62</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>28</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>54</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>437</th>
+      <td>57</td>
+      <td>97</td>
+    </tr>
+    <tr>
+      <th>438</th>
+      <td>61</td>
+      <td>97</td>
+    </tr>
+    <tr>
+      <th>439</th>
+      <td>91</td>
+      <td>98</td>
+    </tr>
+    <tr>
+      <th>440</th>
+      <td>27</td>
+      <td>99</td>
+    </tr>
+    <tr>
+      <th>441</th>
+      <td>52</td>
+      <td>99</td>
+    </tr>
+  </tbody>
+</table>
+<p>442 rows × 2 columns</p>
+</div>
+
+<h3 id="example-visualize-the-graph">Example: visualize the graph<a class="headerlink" href="#example-visualize-the-graph" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">visualize_measurements</span><span class="p">(</span><span class="n">cell_measurements</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
+    <span class="k">except</span> <span class="ne">ModuleNotFoundError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="s2">&quot;, install networkx to visualize the cell graph structure.&quot;</span><span class="p">)</span>
+        <span class="n">_input</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;install now? yes/no&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">_input</span> <span class="o">==</span> <span class="s2">&quot;yes&quot;</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+            <span class="err">!</span><span class="p">{</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">}</span> <span class="o">-</span><span class="n">m</span> <span class="n">pip</span> <span class="n">install</span> <span class="n">networkx</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span>
+
+    <span class="n">cells</span> <span class="o">=</span> <span class="n">cell_measurements</span><span class="o">.</span><span class="n">to_df</span><span class="p">()</span>
+    <span class="n">connections</span> <span class="o">=</span> <span class="n">cell_measurements</span><span class="o">.</span><span class="n">connections</span><span class="o">.</span><span class="n">to_df</span><span class="p">()</span>
+
+    <span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+    <span class="n">G</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">cells</span><span class="o">.</span><span class="n">cell_id</span><span class="p">)</span>
+    <span class="n">G</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">connections</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="n">pos</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">cells</span><span class="p">[</span><span class="s2">&quot;cell_id&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">cells</span><span class="p">[[</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="s2">&quot;y&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">))</span>
+
+    <span class="n">options</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;font_size&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="s2">&quot;node_size&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="s2">&quot;node_color&quot;</span><span class="p">:</span> <span class="n">cell_measurements</span><span class="o">.</span><span class="n">colors</span><span class="p">[:],</span>
+        <span class="s2">&quot;edgecolors&quot;</span><span class="p">:</span> <span class="s2">&quot;0.5&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;linewidths&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span>
+        <span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="n">nx</span><span class="o">.</span><span class="n">draw_networkx</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">pos</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="n">visualize_measurements</span><span class="p">(</span><span class="n">cell_measurements</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../01a_datamate_examples_files/01a_datamate_examples_61_0.png" /></p>
+<div class="highlight"><pre><span></span><code><span class="n">visualize_measurements</span><span class="p">(</span><span class="n">cell_measurements_2</span><span class="p">)</span>
+</code></pre></div>
+<p><img alt="png" src="../01a_datamate_examples_files/01a_datamate_examples_62_0.png" /></p>
+<h2 id="configuration-comparison-and-diffing">Configuration comparison and diffing<a class="headerlink" href="#configuration-comparison-and-diffing" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># we compare how the `measurements` differ in their configuration</span>
+<span class="c1"># (this works with complex nested configurations too)</span>
+<span class="n">cell_measurements</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">cell_measurements_2</span><span class="o">.</span><span class="n">meta</span><span class="p">)</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Namespace(self=[&#39;≠config.seed: 0&#39;], other=[&#39;≠config.seed: 42&#39;])
+</code></pre></div>
+
+<h2 id="directory-structure-visualization-tree-view">Directory structure visualization (tree view)<a class="headerlink" href="#directory-structure-visualization-tree-view" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">datamate</span><span class="w"> </span><span class="kn">import</span> <span class="n">Directory</span><span class="p">,</span> <span class="n">set_verbosity_level</span>
+
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># default: we display 2 levels of the hierarchy and 25 lines</span>
+<span class="n">set_verbosity_level</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">Directory</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>data/ - Last modified: January 17, 2025 19:36:26
+├── CellMeasurements_0000/
+│   ├── _meta.yaml
+│   ├── cell_id.h5
+│   ├── colors.h5
+│   ├── connections/
+│   │   ...
+│   ├── x.h5
+│   └── y.h5
+├── CellMeasurements_0001/
+│   ├── _meta.yaml
+│   ├── cell_id.h5
+│   ├── colors.h5
+│   ├── connections/
+│   │   ...
+│   ├── x.h5
+│   └── y.h5
+├── Directory_0000/
+│   ├── _meta.yaml
+│   ├── cell_id.h5
+│   ├── colors.h5
+│   ├── connections/
+│   │   ...
+│   ├── x.h5
+│   └── y.h5
+└── experiments_config/
+... length_limit, 25, reached,
+displaying: 8 directories, 15 files, 2 levels.
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we display all subdirectories and files</span>
+<span class="n">set_verbosity_level</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">Directory</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>data/ - Last modified: January 17, 2025 19:36:26
+├── CellMeasurements_0000/
+│   ├── _meta.yaml
+│   ├── cell_id.h5
+│   ├── colors.h5
+│   ├── connections/
+│   │   ├── _meta.yaml
+│   │   ├── post_cell_id.h5
+│   │   └── pre_cell_id.h5
+│   ├── x.h5
+│   └── y.h5
+├── CellMeasurements_0001/
+│   ├── _meta.yaml
+│   ├── cell_id.h5
+│   ├── colors.h5
+│   ├── connections/
+│   │   ├── _meta.yaml
+│   │   ├── post_cell_id.h5
+│   │   └── pre_cell_id.h5
+│   ├── x.h5
+│   └── y.h5
+├── Directory_0000/
+│   ├── _meta.yaml
+│   ├── cell_id.h5
+│   ├── colors.h5
+│   ├── connections/
+│   │   ├── _meta.yaml
+│   │   ├── post_cell_id.h5
+│   │   └── pre_cell_id.h5
+│   ├── x.h5
+│   └── y.h5
+└── experiments_config/
+    ├── _meta.yaml
+    ├── cells.csv
+    ├── connections.csv
+    ├── measurements 1.h5
+    └── measurements 2.h5
+
+displaying: 8 directories, 29 files
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we display referenced folder and last modified date</span>
+<span class="n">set_verbosity_level</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">Directory</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>data/ - Last modified: January 17, 2025 19:36:26
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="n">set_verbosity_level</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="parallel-readwrite-operations">Parallel read/write operations<a class="headerlink" href="#parallel-readwrite-operations" title="Permanent link">&para;</a></h2>
+<p>We start the training loop by running the cells below.</p>
+<p>We run the jupyter notebook <code>01b_datamate_intro_supplement.ipynb</code> to see how data is simultaneously written and read to the loss.h5 file.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">tqdm.auto</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="kn">import</span> <span class="n">sleep</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">datamate</span><span class="w"> </span><span class="kn">import</span> <span class="n">Directory</span><span class="p">,</span> <span class="n">root</span>
+
+<span class="n">data_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span>
+
+
+<span class="nd">@root</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">NetworkDir</span><span class="p">(</span><span class="n">Directory</span><span class="p">):</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">:</span>
+        <span class="n">tau</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">200.0</span>
+        <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_iters</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100</span><span class="p">):</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">loss</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_iters</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Training&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">train_iter</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">train_iter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">iter</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+            <span class="s2">&quot;loss&quot;</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="nb">iter</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">tau</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">()</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">sigma</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="n">sleep</span><span class="p">(</span><span class="mf">0.25</span><span class="p">)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="n">network_dir</span> <span class="o">=</span> <span class="n">NetworkDir</span><span class="p">()</span>
+<span class="n">network_dir</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Training:   0%|          | 0/100 [00:00&lt;?, ?it/s]
+
+
+
+
+
+NetworkDir_0000/ - Last modified: January 17, 2025 19:36:27
+├── _meta.yaml
+└── loss.h5
+
+displaying: 1 directory, 2 files
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">network_dir</span><span class="o">.</span><span class="n">loss</span><span class="p">[:])</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;iteration&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;loss&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Training loss&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>Text(0.5, 1.0, &#39;Training loss&#39;)
+</code></pre></div>
+
+<p><img alt="png" src="../01a_datamate_examples_files/01a_datamate_examples_74_1.png" /></p>
+<div class="highlight"><pre><span></span><code><span class="c1"># we verify that the directory exists</span>
+<span class="s2">&quot;NetworkDir_0000&quot;</span> <span class="ow">in</span> <span class="n">Directory</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+</code></pre></div>
+<div class="codehilite"><pre><span></span><code>True
+</code></pre></div>
+
+<div class="highlight"><pre><span></span><code><span class="c1"># we delete the directory and its contents</span>
+<span class="c1"># network_dir.rmtree(&quot;y&quot;)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><span class="c1"># we verify that the directory is deleted</span>
+<span class="c1"># &quot;NetworkDir_0000&quot; in Directory(data_dir)</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+    
+    <div class="md-footer-meta md-typeset">
+        <div class="md-footer-meta__inner md-grid">
+            <div class="md-copyright">
+    
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+        Material for MkDocs
+    </a>
+    
+    
+    <div class="md-copyright__highlight">
+        Lappalainen &copy 2024
+    </div>
+    
+</div>
+        </div>
+    </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.copy", "navigation.instant", "navigation.sections", "navigation.expand", "navigation.indexes", "navigation.top"], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.60a45f97.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
