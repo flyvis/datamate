@@ -982,7 +982,7 @@
 </h1>
 
 <h2 id="datamate-documentation">Datamate Documentation<a class="headerlink" href="#datamate-documentation" title="Permanent link">&para;</a></h2>
-<p>Datamate is a lightweight data and configuration management framework in Python, tailored to support research in machine-learning science. It uses the filesystem as memory, providing a numpy-like interface to HDF5 files organized in hierarchical structures.</p>
+<p>Datamate is a lightweight data and configuration management framework in Python, tailored to support research in machine-learning science. It provides a programming interface to store and retrieve files on a hierarchical filesystem through Directory objects, enabling data creation and access with standard Python code. Built on HDF5 and numpy, it handles file I/O while treating the filesystem as memory.</p>
 <h3 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h3>
 <p>The following example demonstrates how to set up an experiment directory, store experiment configuration in _meta.yaml, and store arrays as HDF5 files without boilerplate code. More examples can be found in the <a href="examples/01a_datamate_examples/">examples</a> section.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">datamate</span>
