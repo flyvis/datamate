@@ -6,69 +6,68 @@ Instances of the base Directory class have methods to simplify reading/writing
 collections of arrays.
 """
 
-import os
-import warnings
-import itertools
-from pathlib import Path
-import shutil
-from time import sleep
+import datetime
 import inspect
+import itertools
+import os
+import shutil
+import warnings
+from importlib import import_module
+from pathlib import Path
+from time import sleep
+from traceback import format_tb
 from typing import (
     Any,
+    Dict,
     Iterator,
     List,
+    Literal,
     Mapping,
     MutableMapping,
     Optional,
+    Protocol,
     Tuple,
-    Dict,
+    TypeVar,
     Union,
     cast,
     get_origin,
-    Literal,
-    TypeVar,
-    Protocol,
     overload,
 )
-import datetime
-from traceback import format_tb
-from importlib import import_module
-
 
 import pandas as pd
 from pandas import DataFrame
 
-from .metadata import (
-    read_meta,
-    write_meta,
-    _identify,
+from .context import (
+    context,
+    get_root_dir,
+    get_scope,
 )
-from .namespaces import (
-    Namespace,
-    namespacify,
-    is_disjoint,
-    is_superset,
-    to_dict,
-)
+from .diff import DirectoryDiff
 from .io import (
     ArrayFile,
     H5Reader,
+    _copy_dir,
+    _copy_file,
+    _extend_file,
+    _extend_h5,
     _read_h5,
     _write_h5,
-    _extend_h5,
-    _copy_file,
-    _copy_dir,
-    _extend_file,
-    directory_to_dict,
     directory_to_df,
+    directory_to_dict,
 )
-from .context import (
-    get_root_dir,
-    get_scope,
-    context,
+from .metadata import (
+    _identify,
+    read_meta,
+    write_meta,
+)
+from .namespaces import (
+    Namespace,
+    is_disjoint,
+    is_superset,
+    namespacify,
+    to_dict,
 )
 from .utils import check_size, tree
-from .diff import DirectoryDiff
 
 __all__ = ["Directory"]
 
@@ -137,10 +136,11 @@ class Directory(metaclass=NonExistingDirectory):
     a directory structure.
 
     Args:
-        path: Path at which the Directory is/should be stored. Can be relative to current
-            `root_dir`.
-        config: Configuration dictionary. When including a `type` field, indicates the
-            Directory type to search for and construct.
+        path (Optional[Path]): Path at which the Directory is/should be stored.
+            Can be relative to current `root_dir`. If not provided, the Directory is
+            created relative to the current `root_dir`.
+        config (Optional[Dict[str, Any]]): Configuration dictionary. When including a
+            `type` field, indicates the Directory type to search for and construct.
 
     Attributes:
         path: Path where Directory is stored.
@@ -165,7 +165,8 @@ class Directory(metaclass=NonExistingDirectory):
         Directory("/path/to/dir", config={"type": "MyType"})
         ```
 
-    After instantiation, Directories act as string-keyed mutable dictionaries containing:
+    After instantiation, Directories act as string-keyed mutable dictionaries
+    containing:
     - ArrayFiles: Single-entry HDF5 files in SWMR mode
     - Paths: Non-array files in other formats
     - Directories: Subdirectories
@@ -242,10 +243,7 @@ class Directory(metaclass=NonExistingDirectory):
 
         if config is None and defaults:  # and _implements_init(cls):
             # to initialize from defaults if no config or path is provided
-            if path is None:
-                config = defaults
-            # to initialize from defaults if no config and empty path is provided
-            elif path is not None and not path.exists():
+            if path is None or path is not None and not path.exists():
                 config = defaults
             # if a non-empty path is provided, we cannot initialize from defaults
             else:
@@ -257,10 +255,9 @@ class Directory(metaclass=NonExistingDirectory):
             cls = _directory_from_config(cls, config)
         elif path is not None and config is not None:
             cls = _directory_from_path_and_config(cls, _resolve_path(path), config)
-        elif path is None and config is None:
-            if _implements_init(cls):
-                # raise ValueError("no configuration provided")
-                pass
+        elif path is None and config is None and _implements_init(cls):
+            # raise ValueError("no configuration provided")
+            pass
 
         if context.check_size_on_init:
             cls.check_size()
@@ -415,9 +412,9 @@ class Directory(metaclass=NonExistingDirectory):
             ```
         """
         directory = Directory.__new__(Directory, *args, **kwargs)
-        directory.update(
-            {column: df[column].values.astype(dtypes[column]) for column in df.columns}
-        )
+        directory.update({
+            column: df[column].values.astype(dtypes[column]) for column in df.columns
+        })
         return directory
 
     def update(self, other: Union[Dict, "Directory"], suffix: str = "") -> None:
@@ -476,10 +473,10 @@ class Directory(metaclass=NonExistingDirectory):
         return self.__getitem__(other)
 
     def __getitem__(self, key: str) -> Any:
-        """Returns an `ArrayFile`, `Path`, or `Directory` corresponding to `self.path/key`.
+        """Returns `ArrayFile`, `Path`, or `Directory` corresponding to `self.path/key`.
 
-        HDF5 files are returned as `ArrayFile`s, other files are returned as `Path`s, and
-        directories and nonexistent entries are returned as (possibly empty) `Directory`s.
+        HDF5 files are returned as `ArrayFile`s, other files as `Path`s, and
+        directories and nonexistent entries as (possibly empty) `Directory`s.
 
         Args:
             key: Name of the entry to retrieve
@@ -488,9 +485,10 @@ class Directory(metaclass=NonExistingDirectory):
             The requested entry as an appropriate type
 
         Note:
-            Attribute access syntax is also supported, and occurrences of `__` in `key` are
-            transformed into `.`, to support accessing encoded files as attributes
-            (i.e. `Directory['name.ext']` is equivalent to `Directory.name__ext`).
+            Attribute access syntax is also supported, and occurrences of `__` in
+            `key` are transformed into `.`, to support accessing encoded files as
+            attributes (i.e. `Directory['name.ext']` is equivalent to
+            `Directory.name__ext`).
         """
         # if context.in_memory:
         #     return object.__getattribute__(self, key)
@@ -503,13 +501,11 @@ class Directory(metaclass=NonExistingDirectory):
             if not self.path.exists():
                 # we wanted to index an H5Dataset but we tried to index a Directory
                 # because the H5Dataset does not exist
-                raise (
-                    FileNotFoundError(
-                        f"Indexing {self.path.name} at {key} not possible for"
-                        f" Directory at {self.path.parent}. File "
-                        f"{self.path.name}.h5 does not exist."
-                    )
-                )
+                raise FileNotFoundError(
+                    f"Indexing {self.path.name} at {key} not possible for"
+                    f" Directory at {self.path.parent}. File "
+                    f"{self.path.name}.h5 does not exist."
+                ) from e
             raise e
 
         # Return an array.
@@ -584,10 +580,16 @@ class Directory(metaclass=NonExistingDirectory):
                 raise TypeError(
                     format_tb(err.__traceback__)[0]
                     + err.args[0]
-                    + f"\nYou're trying to store {val} which cannot be converted to h5-file in {path}."
-                    + "\nFor reference of supported types, see https://docs.h5py.org/en/stable/faq.html?highlight=types#numpy-object-types"
-                    + "\nE.g. NumPy unicode strings must be converted to 'S' strings and back:"
-                    + "\nfoo.bar = array.astype('S') to store and foo.bar[:].astype('U') to retrieve."
+                    + f"\nYou're trying to store {val} which cannot be converted to "
+                    f"h5-file in {path}."
+                    + "\nFor reference of supported types, see "
+                    + "https://docs.h5py.org/en/stable/faq.html?highlight=types"
+                    + "#numpy-object-types"
+                    + "\nE.g. NumPy unicode strings must be converted to 'S' strings "
+                    + "and back:"
+                    + "\nfoo.bar = array.astype('S') to store and foo.bar[:]."
+                    + "astype('U') "
+                    + "to retrieve."
                 ) from None
 
         if self.config is not None and self.status == "done":
@@ -913,7 +915,8 @@ class Directory(metaclass=NonExistingDirectory):
             Total size in bytes
 
         Raises:
-            ValueError: If directory size exceeds warning_at and raise_on_warning is True
+            ValueError: if directory size exceeds warning_at and raise_on_warning
+                is True
         """
         size = check_size(self.path, warning_at, print_size)
         if raise_on_warning and size > warning_at:
@@ -923,8 +926,8 @@ class Directory(metaclass=NonExistingDirectory):
     def to_df(self, dtypes: Optional[Dict[str, Any]] = None) -> DataFrame:
         """Reconstruct a DataFrame from HDF5 column arrays in this directory.
 
-        Combines all equal-length, single-dimensional HDF5 datasets into DataFrame columns.
-        Results are cached to avoid expensive recomputation.
+        Combines all equal-length, single-dimensional HDF5 datasets into
+        DataFrame columns. Results are cached to avoid expensive recomputation.
 
         Args:
             dtypes: Optional dictionary mapping column names to numpy dtypes
@@ -1029,9 +1032,9 @@ def merge(dict1: Dict, dict2: Dict) -> Dict:
         merged.update(dict1)
         merged.update(dict2)
     elif is_superset(dict1, dict2):
-        merged.update(dict1)
-    elif is_superset(dict2, dict1):
         merged.update(dict2)
+    elif is_superset(dict2, dict1):
+        merged.update(dict1)
     else:
         raise ValueError(f"merge conflict: {dict1} and {dict2}")
     return merged
@@ -1436,7 +1439,7 @@ def _directory_from_path_and_config(
                     warnings.warn(
                         (
                             f'"{directory.path}" (incompatible config):\n'
-                            f'{config.diff(meta.config, name1="passed", name2="stored")}'
+                            f'{config.diff(meta.config, name1="passed", name2="stored")}'  # noqa: E501
                         ),
                         Warning,
                         stacklevel=2,
@@ -1490,12 +1493,10 @@ def _build(directory: Directory) -> None:
                 build_args = []
                 build_kwargs = {}
             # case 2: __init__(self, config)
-            elif n_build_args == 2 and any(
-                [
-                    vn in ["config", "conf"]
-                    for vn in directory.__init__.__code__.co_varnames
-                ]
-            ):
+            elif n_build_args == 2 and any([
+                vn in ["config", "conf"]
+                for vn in directory.__init__.__code__.co_varnames
+            ]):
                 build_args = [directory._config]
                 build_kwargs = {}
             # case 3: __init__(self, foo=1, bar=2) to specify defaults and config
@@ -1618,7 +1619,7 @@ def _new_directory_path(type_: type) -> Path:
         dst = root / f"{type_name}_{i:04x}"
         if not dst.exists():
             return dst.absolute()
-    assert False  # for MyPy
+    raise AssertionError("Failed to find a unique directory name")  # for MyPy
 
 
 def _forward_subclass(cls: type, config: object = {}) -> object:
@@ -1665,23 +1666,17 @@ def _forward_subclass(cls: type, config: object = {}) -> object:
                         f'"{cls_override}" can\'t be resolved as it is not found'
                         + " inside the current scope of Directory subclasses."
                         + " This dynamically created subclass allows to view the data"
-                        + " without access to the original class definition and methods."
+                        + " without access to the original class definition"
+                        + " and methods."
                         + " If this happens unexpectedly with autoreload enabled in"
-                        + " a notebook/IPython session, run `datamate.reset_scope(datamate.Directory)`"
+                        + " a notebook/IPython session, run "
+                        + "`datamate.reset_scope(datamate.Directory)`"
                         + " as a workaround or restart the kernel"
                         + " (background: https://github.com/ipython/ipython/issues/12399)."
                     ),
                     ConfigWarning,
                     stacklevel=2,
                 )
-            # raise KeyError(
-            #     f'"{cls_override}" can\'t be resolved because it is not found'
-            #     + f" inside the current scope of Directory subclasses."
-            #     + " If this happens unexpectedly with autoreload enabled in"
-            #     + " a notebook/IPython session, run `datamate.reset_scope(datamate.Directory)`"
-            #     + " as a workaround or restart the kernel"
-            #     + f" (background: https://github.com/ipython/ipython/issues/12399)."
-            # ) from e
 
     # Construct and return a Directory instance
     obj = object.__new__(cls)

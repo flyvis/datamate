@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 373 373" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:square;stroke-miterlimit:1.5;">
+    <g transform="matrix(1,0,0,1,-2221.6,-2390.63)">
+        <g id="favicon" transform="matrix(0.581609,0,0,0.760295,1004.91,615.3)">
+            <rect x="2091.93" y="2335.05" width="639.991" height="489.458" style="fill:none;"/>
+            <clipPath id="_clip1">
+                <rect x="2091.93" y="2335.05" width="639.991" height="489.458"/>
+            </clipPath>
+            <g clip-path="url(#_clip1)">
+                <g transform="matrix(1.71937,0,0,1.31528,2322.12,2324.15)">
+                    <g transform="matrix(416.667,0,0,416.667,227.044,304.129)">
+                    </g>
+                    <text x="9.544px" y="304.129px" style="font-family:'ChakraPetch-Bold', 'Chakra Petch';font-weight:700;font-size:416.667px;fill:rgb(0,46,64);">/</text>
+                </g>
+                <g transform="matrix(1.71937,0,0,0.995369,1646.44,1146.27)">
+                    <path d="M283.888,1423.87L284.879,1652.47L475.412,1652.92" style="fill:none;stroke:rgb(0,46,64);stroke-width:51.69px;"/>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>

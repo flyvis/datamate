@@ -1,66 +1,68 @@
 # Datamate
 
-Datamate is a lightweight data and configuration management framework for structuring data in machine learning projects on a hierarchical filesystem.
+Datamate is a data and configuration management framework in Python for machine-learning research. It uses the filesystem as memory through Directory objects, providing a programming interface to store and retrieve files in hierarchical structures using HDF5.
 
-Datamate provides a simple framework to work with heterogenous data by automating
-input and output of arrays and configurations to disk.
-It provides an interface to the system's filesystem through pointers to files
-and representations of the hierarchical structure.
+## Main Features
 
-Typical usecases are:
+- Filesystem as memory through Directory objects
+- Hierarchical data organization
+- Automatic path handling and resolution with pathlib
+- Array storage in HDF5 format
+- Parallel read/write operations
+- Configuration-based compilation and access of data
+- Configuration management in YAML files
+- Configuration comparison and diffing
+- Pandas DataFrame integration
+- Directory structure visualization (tree view)
+- Experiment status tracking
 
-- automating pathing and orchestrating data
-- seamless input and output operations to a hierarchical filesystem
-- keep track of configurations, e.g. for preprocessing, experiments, analyses
-- structured preprocessing with minimal overhead code---cause configuration-based, preprocessed data can automatically be computed only once and then referenced to
-- for instance to skip slow computations when restarting the kernel in your `everything_in_here.ipynb` notebook
-- interactive prototyping in data-heterogenous applications: hierarchical file views in notebooks, pandas integration, configuration diffs, simultaneous write and read
-
-# Examples
-
-Datamate's `Directory` instances can point to (processed) data on the disk (relative to a root directory),
-allowing seamless I/O.
-
-E.g., to store a numpy array
+## Example
 
 ```python
->>> import datamate
->>> datamate.set_root_dir("./data")
->>> directory = datamate.Directory("experiment_01")  # pointer to ./data/experiment_01
->>> directory.array = np.arange(5)  # creates parent directory and writes array to h5 file
->>> directory
-experiment_01/ - Last modified: April 04, 2022 08:24:56
-└── array.h5
+import datamate
+import numpy as np
 
-displaying: 1 directory, 1 files
+# Set up experiment directory
+datamate.set_root_dir("./experiments")
+
+# Set up experiment configuration
+config = {
+    "model": "01",
+    "optimizer": "Adam",
+    "learning_rate": 0.001,
+    "n_epochs": 100
+}
+
+# Set up experiment directory and store configuration
+exp = datamate.Directory("vision_study/model_01", config)
+
+# Store arrays as HDF5 files
+exp.images = np.random.rand(100, 64, 64)  # stored as images.h5
+exp.responses = np.zeros((100, 1000))     # stored as responses.h5
+
+# Access data
+mean_response = exp.responses[:].mean()
 ```
 
-To retrieve the array:
+More detailed examples in the [documentation](https://flyvis.github.io/datamate).
 
-```python
->>> import datamate
->>> datamate.set_root_dir("./data")
->>> directory = datamate.Directory("experiment_01")
->>> directory.array[:]
-array([0, 1, 2, 3, 4])
-```
-
-More detailed examples in `examples/01. Introduction to Datamate.ipynb`.
-
-# Installation
+## Installation
 
 Using pip:
 
-`pip install datamate`
+```bash
+pip install datamate
+```
 
-# Related frameworks
+## Documentation
 
-Datamate is adapted from [artisan](https://github.com/MasonMcGill/artisan) to focus on flexibility in interactive jupyter notebooks with only optional configuration and type enforcement.
+Full documentation is available at [flyvis.github.io/datamate](https://flyvis.github.io/datamate).
 
-Because cloud-based and relational database solutions for ML-workflows can be little
-beginner friendly or little flexible, Datamate is simply based on I/O of arrays and configurations on
-disk with pythonic syntax, and it targets interactive and notebook-based workflows.
+## Related Projects
 
-# Contribution
+- [flyvis](https://github.com/turagalab/flyvis) - Usage example of datamate
+- [artisan](https://github.com/MasonMcGill/artisan) - The framework that inspired datamate
 
-Contributions welcome!
+## Contributing
+
+Contributions welcome! Please check our [Contributing Guide](https://flyvis.github.io/datamate/contribute) for guidelines.

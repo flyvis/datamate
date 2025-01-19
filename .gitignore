@@ -11,3 +11,6 @@ build
 *.DS_Store*
 developer/
 datamate/version.py
+*.afdesign*
+docs/site/
+paper/

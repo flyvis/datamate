@@ -1,0 +1,143 @@
+site_name: Datamate Documentation
+site_url: "https://flyvis.github.io/datamate"
+repo_url: "https://github.com/flyvis/datamate"
+
+nav:
+  - Home: index.md
+  - Examples:
+    - datamate Examples: "examples/01a_datamate_examples.md"
+    - Parallel read/write operations: "examples/01b_parallel_read_and_write.md"
+  - API Reference:
+    - Directory: reference/directory.md
+    - Context: reference/context.md
+    - Namespace: reference/namespace.md
+    - Metadata: reference/metadata.md
+    - IO: reference/io.md
+    - Diff: reference/diff.md
+    - Utils: reference/utils.md
+  - Community:
+    - Contributing: contribute.md
+    - FAQ: faq.md
+    - Acknowledgements: acknowledgements.md
+
+theme:
+  name: material
+  logo: 'images/datamate_logo_light.webp'
+  logo_dark: 'images/datamate_logo_dark.webp'
+  logo_light: 'images/datamate_logo_light.webp'
+  collapse_navigation: false
+  custom_dir: overrides
+
+  features:
+    - content.code.copy
+    - navigation.instant
+    - navigation.sections
+    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+
+  palette:
+
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      primary: white
+      accent: purple
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: purple
+      background: "#ffffff"
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: purple
+      background: "#000000"
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to system preference
+
+  extra:
+  version:
+    provider: mike
+
+markdown_extensions:
+  - extra
+  - smarty
+  - admonition
+  - attr_list
+  - md_in_html
+  - codehilite:
+      guess_lang: false
+  - toc:
+      permalink: true
+      toc_depth: 5
+  - markdown_include.include:
+      base_path: ../
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.critic
+  - pymdownx.details
+  - pymdownx.emoji
+  - pymdownx.inlinehilite
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+
+plugins:
+  - search
+  - mike
+  - macros
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            show_source: true
+            members_order: source
+            show_root_heading: true
+            show_root_toc_entry: true
+            show_symbol_type_toc: true
+            show_root_full_path: true
+            separate_signature: true
+            merge_init_into_class: false
+
+watch:
+  - ../datamate
+
+extra_css:
+  - custom.css
+
+
+copyright: Lappalainen &copy 2024
+extra:
+  social:
+    - icon: fontawesome/solid/envelope
+      link: mailto:janne.lappalainen@uni-tuebingen.de?cc=jakob.macke@uni-tuebingen.de
+    - icon: fontawesome/brands/github
+      link: https://github.com/flyvis/datamate
+    - icon: fontawesome/solid/newspaper
+      link: https://www.nature.com/articles/s41586-024-07939-3

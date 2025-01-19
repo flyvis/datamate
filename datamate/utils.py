@@ -1,12 +1,14 @@
 """Utility functions for Directory objects."""
 
-import os
+import contextlib
 import datetime
 import itertools
-from pathlib import Path
-from typing import Mapping, Union
+import os
 import warnings
 from numbers import Number
+from pathlib import Path
+from typing import Mapping, Union
+
 import numpy as np
 
 __all__ = ["check_size", "byte_to_str", "tree"]
@@ -38,14 +40,12 @@ def check_size(
 
     def get_size(start_path: Path) -> int:
         total_size = 0
-        for dirpath, dirnames, filenames in os.walk(start_path):
+        for dirpath, _, filenames in os.walk(start_path):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
                 if not os.path.islink(fp):
-                    try:
+                    with contextlib.suppress(FileNotFoundError):
                         total_size += os.path.getsize(fp)
-                    except FileNotFoundError:
-                        pass
         return total_size
 
     size_in_bytes = get_size(path)
@@ -55,7 +55,8 @@ def check_size(
         with warnings.catch_warnings():
             warnings.simplefilter("always")
             warnings.warn(
-                f"This directory {path.name} occupies {sizeof_fmt(size_in_bytes)} of disk space.",
+                f"This directory {path.name} occupies {sizeof_fmt(size_in_bytes)} "
+                + "of disk space.",
                 ResourceWarning,
                 stacklevel=2,
             )
@@ -91,6 +92,8 @@ def tree(
         ```python
         print(tree(Path("./my_directory"), level=2))
         ```
+
+    Based on: https://stackoverflow.com/a/59109706
     """
     # prefix components:
     space = "    "
@@ -153,7 +156,7 @@ def tree(
         if next(iterator, None):
             tree_string += f"... length_limit, {length_limit}, reached,"
         tree_string += (
-            f"\ndisplaying: {directories} {'directory' if directories == 1 else 'directories'}"
+            f"\ndisplaying: {directories} {'directory' if directories == 1 else 'directories'}"  # noqa: E501
             + (f", {files} files" if files else "")
             + (f", {level} levels." if level >= 1 else "")
         )

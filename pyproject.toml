@@ -1,20 +1,28 @@
 [build-system]
-requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=3.4"]
+requires = ["setuptools>=65", "wheel", "setuptools_scm[toml]>=3.4"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 write_to = "datamate/version.py"
 
+[tool.setuptools]
+include-package-data = true
+
 [project]
 name = "datamate"
 dynamic = ["version"]
 description = "A data organization and compilation system."
-authors = [
-    {name = "Janne K. Lappalainen"},
-    {name = "Mason McGill"}
-]
 readme = "README.md"
 license = {file = "LICENSE"}
+requires-python = ">=3.9,<3.13"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    """License :: OSI Approved :: MIT License""",
+    "Programming Language :: Python :: 3",
+    "Development Status :: 3 - Alpha",
+]
 dependencies = [
     "numpy",
     "pandas",
@@ -24,33 +32,57 @@ dependencies = [
     "PyYAML"
 ]
 
-
 [project.optional-dependencies]
 dev = [
-    "black",
     "pre-commit",
     "jupyter",
     "setuptools_scm",
-    "pytest"
+    "pytest",
+    "ruff",
+    "pytest-cov"
 ]
-notebook = [
-    "ipython",
-    "notebook",
-    "ipywidgets",
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "markdown-include",
+    "mkdocs-redirects",
+    "mkdocstrings[python] >= 0.18",
+    "nbconvert",
+    "mike",
+    "mkdocs-macros-plugin",
+    "jupyter",
+    "tabulate",
     "tqdm",
-    "matplotlib",
-    "toolz"
+    "ipywidgets",
 ]
 
 [tool.setuptools.packages.find]
-include=["datamate"]
+include = ["datamate"]
 
-[tool.black]
-line-length = 88  
+[tool.ruff]
+line-length = 88
+extend-include = []
 
-[[tool.pre-commit.repos]]
-repo = "https://github.com/psf/black"
-rev = "24.1.1"
-hooks = [
-    { id = "black", language_version = "python3" }
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "SIM", "I"]
+ignore = [
+    "E731",
+    "B006",
+    "B008",
+    "F841",
 ]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"__init__.py" = ["I001", "E402", "F401", "F403"]
+"test_*.py" = ["F403", "F405"]
+
+[tool.ruff.format]
+preview = true
+quote-style = "preserve"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[project.urls]
+"Homepage" = "https://github.com/flyvis/datamate"
+"Bug Tracker" = "https://github.com/flyvis/datamate/issues"

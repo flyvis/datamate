@@ -2,14 +2,19 @@
 This module handles context management and global settings for Directory objects.
 """
 
-import threading
-from pathlib import Path
-from types import NoneType
-from typing import Optional, Union, Dict, Literal, Iterator
-from contextlib import contextmanager
-import itertools
-import inspect
 import functools
+import inspect
+import itertools
+import threading
+from contextlib import contextmanager
+from pathlib import Path
+
+try:
+    from types import NoneType
+except ImportError:
+    NoneType = type(None)
+
+from typing import Dict, Iterator, Literal, Optional, Union
 
 context = threading.local()
 context.enforce_config_match = True
@@ -62,6 +67,7 @@ def root(
     Args:
         root_dir: Root directory that will be set at execution of the callable.
         precedence: Determines the precedence of this root setting.
+
             - `1`: Lowest - global and context settings override this
             - `2`: Medium - overrides global but not context settings
             - `3`: Highest - overrides both global and context settings
@@ -91,11 +97,13 @@ def root(
                 _root_dir = get_root_dir()
                 within_context = getattr(context, "within_root_context", False)
 
-                if root_dir is not None:
-                    if precedence == 3 or (precedence == 2 and not within_context):
-                        set_root_dir(root_dir)
-                    elif precedence == 1 and not within_context:
-                        set_root_dir(root_dir)
+                if root_dir is not None and (
+                    precedence == 3
+                    or (precedence == 2 and not within_context)
+                    or precedence == 1
+                    and not within_context
+                ):
+                    set_root_dir(root_dir)
 
                 _return = callable(*args, **kwargs)
                 set_root_dir(_root_dir)
@@ -110,11 +118,13 @@ def root(
                 _root_dir = get_root_dir()
                 within_context = getattr(context, "within_root_context", False)
 
-                if root_dir is not None:
-                    if precedence == 3 or (precedence == 2 and not within_context):
-                        set_root_dir(root_dir)
-                    elif precedence == 1 and not within_context:
-                        set_root_dir(root_dir)
+                if root_dir is not None and (
+                    precedence == 3
+                    or (precedence == 2 and not within_context)
+                    or precedence == 1
+                    and not within_context
+                ):
+                    set_root_dir(root_dir)
 
                 _return = new(*args, **kwargs)
                 set_root_dir(_root_dir)
@@ -210,6 +220,7 @@ def set_verbosity_level(level: Literal[0, 1, 2]) -> None:
 
     Args:
         level: Verbosity level where:
+
             - `0`: Only top level directory name and last modified date
             - `1`: Maximum 2 levels and 25 lines
             - `2`: All directories and files
