@@ -32,7 +32,7 @@ the actual release.
 rm -rf dist/
 
 # Set version temporarily for this session manually (change version number)
-export SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0.dev7
+export SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0.dev1
 
 # Now build and test
 python -m build
@@ -45,43 +45,12 @@ python -m twine upload --repository testpypi dist/*
 
 In a clean environment, run these sporadic tests to verify the installation:
 ```bash
-# Install in clean environment to test (change version number)
-python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ flyvis==0.0.0.dev7
+python -m pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "datamate==0.0.0.dev1"
 
-# Test installation
-flyvis download-pretrained
-flyvis train --help
-flyvis train-single --help
-python -c "from flyvis import Network; n = Network()"
-python -c "from flyvis import EnsembleView; e = EnsembleView('flow/0000')"
+python -c "from datamate import Directory; d = Directory(); assert not d.path.exists()"
 
+pip uninstall datamate -y
 
-# Test custom configuration
-flyvis init-config
-# Add custom_syn_strength.yaml to flyvis_config/network/edge_config/syn_strength/
-cat > flyvis_config/network/edge_config/syn_strength/custom_syn_strength.yaml << 'EOL'
-defaults:
-  - /network/edge_config/syn_strength/syn_strength@_here_
-  - _self_
-
-scale: 1.0
-EOL
-# Run training and check if custom config is loaded correctly
-flyvis train-single --config-dir $(pwd)/flyvis_config network/edge_config/syn_strength=custom_syn_strength ensemble_and_network_id=0 task_name=flow delete_if_exists=true 2>&1 | while read line; do
-    echo "$line"
-    if [[ "$line" == *"'syn_strength': {'type': 'SynapseCountScaling'"* && "$line" == *"'scale': 1.0"* ]]; then
-        echo "Found custom scale parameter in config!"
-        pkill -P $$
-        break
-    fi
-done
-# Delete custom config
-rm -rf flyvis_config
-
-# Delete installation and downloaded models
-pip uninstall flyvis -y
-
-# When done testing, unset it
 unset SETUPTOOLS_SCM_PRETEND_VERSION
 ```
 
@@ -102,20 +71,20 @@ Commit all open changes to the repository.
 
 ```bash
 git add CHANGELOG.md
-git commit -m "docs: add changelog for v1.1.2"
+git commit -m "docs: add changelog for v1.0.0"
 ```
 
 ### Create and Push Tag
 
 ```bash
 # Create annotated tag using changelog
-git tag -a v1.1.2 -F CHANGELOG.md
+git tag -a v1.0.0 -F CHANGELOG.md
 
 # Push to both remotes
 git push origin main
-git push origin v1.1.2
+git push origin v1.0.0
 git push public_repo main
-git push public_repo v1.1.2
+git push public_repo v1.0.0
 ```
 
 ### Build and Upload to PyPI
@@ -124,7 +93,7 @@ git push public_repo v1.1.2
 rm -rf dist/
 
 # Set version temporarily for this session manually
-export SETUPTOOLS_SCM_PRETEND_VERSION=1.1.2
+export SETUPTOOLS_SCM_PRETEND_VERSION=1.0.0
 
 # Build package
 python -m build
@@ -142,7 +111,7 @@ python -m twine upload dist/*
 
 1. Verify package can be installed from PyPI:
 ```bash
-python -m pip install flyvis
+python -m pip install datamate
 ```
 
 ## Check documentation is updated on the documentation website
@@ -157,5 +126,3 @@ We follow semantic versioning (MAJOR.MINOR.PATCH):
 ## Notes
 
 - Always test on Test PyPI before releasing to PyPI
-- Ideally CI checks pass before releasing
-- Keep both origin and public_repo remotes in sync
