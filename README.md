@@ -1,4 +1,14 @@
-# Datamate
+<h1>
+<p style="text-align:left;">
+    <img src="docs/docs/images/datamate_logo_light.webp" width="50%" alt="Datamate Logo">
+</p>
+</h1>
+
+[![PyPI version](https://badge.fury.io/py/datamate.svg)](https://badge.fury.io/py/datamate)
+[![Python](https://img.shields.io/pypi/pyversions/datamate.svg)](https://pypi.org/project/datamate/)
+[![Tests](https://github.com/flyvis/datamate/actions/workflows/auto_test.yml/badge.svg)](https://github.com/flyvis/datamate/actions/workflows/auto_test.yml)
+[![codecov](https://codecov.io/gh/flyvis/datamate/branch/main/graph/badge.svg)](https://codecov.io/gh/flyvis/datamate)
+[![License](https://img.shields.io/github/license/flyvis/datamate.svg)](https://github.com/flyvis/datamate/blob/main/LICENSE)
 
 Datamate is a data and configuration management framework in Python for machine-learning research. It uses the filesystem as memory through Directory objects, providing a programming interface to store and retrieve files in hierarchical structures using HDF5.
 
