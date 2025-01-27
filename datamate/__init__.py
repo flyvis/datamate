@@ -21,6 +21,7 @@ from datamate.context import (
     set_root_context,
     reset_scope,
     delete_if_exists,
+    context,
 )
 
 from datamate.namespaces import Namespace, namespacify
@@ -42,5 +43,6 @@ __all__ = [
     "set_root_context",
     "reset_scope",
     "delete_if_exists",
+    "context",
     "__version__",
 ]

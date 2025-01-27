@@ -11,10 +11,15 @@ from ruamel.yaml import YAML
 from datamate import (
     Directory,
     Namespace,
+    delete_if_exists,
     root,
     set_root_context,
     set_root_dir,
-    delete_if_exists,
+)
+from datamate.diff import (
+    DirectoryDiff,
+    assert_equal_attributes,
+    assert_equal_directories,
 )
 from datamate.directory import (
     ConfigWarning,
@@ -23,14 +28,9 @@ from datamate.directory import (
     _auto_doc,
 )
 from datamate.io import H5Reader
-from datamate.diff import (
-    DirectoryDiff,
-    assert_equal_attributes,
-    assert_equal_directories,
-)
 from datamate.metadata import (
-    read_meta,
     MetadataValidationError,
+    read_meta,
 )
 
 # -- Helper functions ----------------------------------------------------------
@@ -821,9 +821,8 @@ def test_default_config(tmp_path):
             ),
         )
 
-    with pytest.warns(ImplementationWarning):
-        with pytest.raises(FileNotFoundError):
-            dir = BadImplementation(tmp_path / "test8")
+    with pytest.raises(FileNotFoundError), pytest.warns(ImplementationWarning):
+        dir = BadImplementation(tmp_path / "test8")
 
     # config has no default attributes but directory has init, with custom config
     with pytest.warns(ImplementationWarning):
@@ -859,13 +858,11 @@ def test_default_config(tmp_path):
         )
 
     # config has no default attributes but directory has init, with custom, wrong config
-    with pytest.raises(AttributeError):
-        with pytest.warns(ImplementationWarning):
-            dir = BadImplementation(dict(y=2))
+    with pytest.raises(AttributeError), pytest.warns(ImplementationWarning):
+        dir = BadImplementation(dict(y=2))
 
-    with pytest.raises(AttributeError):
-        with pytest.warns(ImplementationWarning):
-            dir = BadImplementation(tmp_path / "test12", dict(y=2))
+    with pytest.raises(AttributeError), pytest.warns(ImplementationWarning):
+        dir = BadImplementation(tmp_path / "test12", dict(y=2))
 
 
 # -- test auto docstring

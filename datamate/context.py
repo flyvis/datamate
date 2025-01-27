@@ -5,8 +5,8 @@ This module handles context management and global settings for Directory objects
 import functools
 import inspect
 import itertools
-import threading
 from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
 
 try:
@@ -15,13 +15,6 @@ except ImportError:
     NoneType = type(None)
 
 from typing import Dict, Iterator, Literal, Optional, Union
-
-context = threading.local()
-context.enforce_config_match = True
-context.check_size_on_init = False
-context.verbosity_level = 1
-context.delete_if_exists = False
-
 
 __all__ = [
     "set_root_dir",
@@ -41,13 +34,39 @@ __all__ = [
 ]
 
 
+class context:
+    enforce_config_match: ContextVar[bool] = ContextVar(
+        "enforce_config_match", default=True
+    )
+    check_size_on_init: ContextVar[bool] = ContextVar(
+        "check_size_on_init", default=False
+    )
+    verbosity_level: ContextVar[int] = ContextVar("verbosity_level", default=1)
+    delete_if_exists: ContextVar[bool] = ContextVar("delete_if_exists", default=False)
+    root_dir: ContextVar[Path] = ContextVar("root_dir", default=Path("."))
+    within_root_context: ContextVar[bool] = ContextVar(
+        "within_root_context", default=False
+    )
+    scope: ContextVar[Dict[str, type]] = ContextVar("scope", default=None)
+
+    def __setattr__(self, name, value):
+        if name in self.__class__.__dict__ and isinstance(
+            self.__class__.__dict__[name], ContextVar
+        ):
+            raise AttributeError(
+                f"Cannot overwrite ContextVar {name} directly. Use `.set()` to "
+                "update its value."
+            )
+        super().__setattr__(name, value)
+
+
 def set_root_dir(root_dir: Optional[Path]) -> None:
     """Set the directory in which to search for Directory objects.
 
     Args:
         root_dir: Path to set as root directory. If None, uses current directory.
     """
-    context.root_dir = Path(root_dir) if root_dir is not None else Path(".")
+    context.root_dir.set(Path(root_dir) if root_dir is not None else Path("."))
 
 
 def get_root_dir() -> Path:
@@ -56,7 +75,7 @@ def get_root_dir() -> Path:
     Returns:
         Path: Current root directory, defaults to current directory if not set.
     """
-    return getattr(context, "root_dir", Path("."))
+    return context.root_dir.get()
 
 
 def root(
@@ -89,13 +108,16 @@ def root(
         ValueError: If decorator is applied to anything other than function or class.
     """
 
+    if precedence not in [1, 2, 3]:
+        raise ValueError("Precedence must be 1, 2, or 3")
+
     def decorator(callable):
         if inspect.isfunction(callable):
 
             @functools.wraps(callable)
             def function(*args, **kwargs):
                 _root_dir = get_root_dir()
-                within_context = getattr(context, "within_root_context", False)
+                within_context = context.within_root_context.get(False)
 
                 if root_dir is not None and (
                     precedence == 3
@@ -116,7 +138,7 @@ def root(
             @functools.wraps(callable)
             def function(*args, **kwargs):
                 _root_dir = get_root_dir()
-                within_context = getattr(context, "within_root_context", False)
+                within_context = context.within_root_context.get(False)
 
                 if root_dir is not None and (
                     precedence == 3
@@ -157,12 +179,12 @@ def set_root_context(root_dir: Union[str, Path, NoneType] = None) -> None:
     """
     _root_dir = get_root_dir()
     set_root_dir(root_dir)
-    context.within_root_context = True
+    context.within_root_context.set(True)
     try:
         yield
     finally:
         set_root_dir(_root_dir)
-        context.within_root_context = False
+        context.within_root_context.set(False)
 
 
 @contextmanager
@@ -178,11 +200,11 @@ def delete_if_exists(enable: bool = True) -> None:
             Directory(config)
         ```
     """
-    context.delete_if_exists = enable
+    token = context.delete_if_exists.set(enable)
     try:
         yield
     finally:
-        context.delete_if_exists = False
+        context.delete_if_exists.reset(token)
 
 
 def enforce_config_match(enforce: bool) -> None:
@@ -195,7 +217,7 @@ def enforce_config_match(enforce: bool) -> None:
         Configs are compared when initializing a directory from an existing path
         and configuration.
     """
-    context.enforce_config_match = enforce
+    context.enforce_config_match.set(enforce)
 
 
 def check_size_on_init(enforce: bool) -> None:
@@ -208,11 +230,11 @@ def check_size_on_init(enforce: bool) -> None:
         Checking the size of a directory is slow, therefore this should be used
         only consciously.
     """
-    context.check_size_on_init = enforce
+    context.check_size_on_init.set(enforce)
 
 
 def get_check_size_on_init() -> bool:
-    return context.check_size_on_init
+    return context.check_size_on_init.get()
 
 
 def set_verbosity_level(level: Literal[0, 1, 2]) -> None:
@@ -225,7 +247,9 @@ def set_verbosity_level(level: Literal[0, 1, 2]) -> None:
             - `1`: Maximum 2 levels and 25 lines
             - `2`: All directories and files
     """
-    context.verbosity_level = level
+    if level not in [0, 1, 2]:
+        raise ValueError("Verbosity level must be 0, 1, or 2")
+    context.verbosity_level.set(level)
 
 
 def set_scope(scope: Optional[Dict[str, type]]) -> None:
@@ -234,10 +258,7 @@ def set_scope(scope: Optional[Dict[str, type]]) -> None:
     Args:
         scope: Dictionary mapping type names to type objects.
     """
-    if hasattr(context, "scope"):
-        del context.scope
-    if scope is not None:
-        context.scope = scope
+    context.scope.set(scope)
 
 
 def get_scope() -> Dict[str, type]:
@@ -246,7 +267,9 @@ def get_scope() -> Dict[str, type]:
     Returns:
         Dict[str, type]: Current scope or default scope if not set.
     """
-    return context.scope if hasattr(context, "scope") else get_default_scope()
+    return (
+        context.scope.get() if context.scope.get() is not None else get_default_scope()
+    )
 
 
 def get_default_scope(cls: Optional[object] = None) -> Dict[str, type]:

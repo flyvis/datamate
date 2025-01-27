@@ -222,7 +222,7 @@ class Directory(metaclass=NonExistingDirectory):
 
         if path is not None and isinstance(path, Path) and path.exists():
             # case 1: path exists and global context is deleting if exists
-            if context.delete_if_exists:
+            if context.delete_if_exists.get():
                 shutil.rmtree(path)
             # case 2: path exists and local kwargs are deleting if exists
             if (
@@ -259,7 +259,7 @@ class Directory(metaclass=NonExistingDirectory):
             # raise ValueError("no configuration provided")
             pass
 
-        if context.check_size_on_init:
+        if context.check_size_on_init.get():
             cls.check_size()
 
         return cls
@@ -490,8 +490,6 @@ class Directory(metaclass=NonExistingDirectory):
             attributes (i.e. `Directory['name.ext']` is equivalent to
             `Directory.name__ext`).
         """
-        # if context.in_memory:
-        #     return object.__getattribute__(self, key)
 
         try:
             # to catch cases where key is an index to a reference to an h5 file.
@@ -537,9 +535,6 @@ class Directory(metaclass=NonExistingDirectory):
         attributes (i.e. `Directory['name.ext'] = val` is equivalent to
         `Directory.name__ext = val`).
         """
-        # if context.in_memory:
-        #     object.__setattr__(self, key, val)
-        #     return
 
         path = self.path / key
 
@@ -605,9 +600,6 @@ class Directory(metaclass=NonExistingDirectory):
         attributes (i.e. `del Directory['name.ext']` is equivalent to
         `del Directory.name__ext`).
         """
-        # if context.in_memory:
-        #     object.__delitem__(self, key)
-        #     return
         path = self.path / key
 
         # Delete an array file.
@@ -690,8 +682,6 @@ class Directory(metaclass=NonExistingDirectory):
         Note:
             Files corresponding to `self[key]` are created if they do not already exist.
         """
-        # if context.in_memory:
-        #     self.__setitem__(key, np.append(self.__getitem__(key), val, axis=0))
 
         path = self.path / key
 
@@ -729,7 +719,7 @@ class Directory(metaclass=NonExistingDirectory):
     # --- Views ---
 
     def __repr__(self):
-        if context.verbosity_level == 1:
+        if context.verbosity_level.get() == 1:
             string = tree(
                 self.path,
                 last_modified=True,
@@ -738,7 +728,7 @@ class Directory(metaclass=NonExistingDirectory):
                 verbose=True,
                 not_exists_message="empty",
             )
-        elif context.verbosity_level == 0:
+        elif context.verbosity_level.get() == 0:
             string = tree(
                 self.path,
                 last_modified=True,
@@ -1334,8 +1324,6 @@ def _directory_from_path(cls: Directory, path: Path) -> Directory:
     if path.is_file():
         raise FileExistsError(f"{path} is a file.")
 
-    # if context.enforce_config_match:
-
     if not path.is_dir():
         if _implements_init(cls) and not get_defaults(cls):
             raise FileNotFoundError(
@@ -1351,10 +1339,7 @@ def _directory_from_path(cls: Directory, path: Path) -> Directory:
             f", not a {cls.__module__}.{cls.__qualname__}."
         )
 
-    # if context.enforce_config_match:
     directory = _forward_subclass(type(cls), config)
-    # else:
-    #     directory = _forward_subclass(type(cls), {})
 
     object.__setattr__(directory, "_cached_keys", set())
     object.__setattr__(directory, "path", path)
@@ -1429,7 +1414,7 @@ def _directory_from_path_and_config(
         config = Namespace({"type": _identify(type(directory)), **directory._config})
         if meta.config != config:
             with warnings.catch_warnings():
-                if context.enforce_config_match and meta.config is not None:
+                if context.enforce_config_match.get() and meta.config is not None:
                     raise FileExistsError(
                         f'"{directory.path}" (incompatible config):\n'
                         f'{config.diff(meta.config, name1="passed", name2="stored")}'
