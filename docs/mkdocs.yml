@@ -5,8 +5,8 @@ repo_url: "https://github.com/flyvis/datamate"
 nav:
   - Home: index.md
   - Examples:
-    - datamate Examples: "examples/01a_datamate_examples.md"
-    - Parallel read/write operations: "examples/01b_parallel_read_and_write.md"
+    - datamate Examples: "examples/01a_datamate_examples.ipynb"
+    - Parallel read/write operations: "examples/01b_parallel_read_and_write.ipynb"
   - API Reference:
     - Directory: reference/directory.md
     - Context: reference/context.md
@@ -124,6 +124,9 @@ plugins:
             show_root_full_path: true
             separate_signature: true
             merge_init_into_class: false
+  - mkdocs-jupyter:
+      include_source: True
+      execute: false
 
 watch:
   - ../datamate

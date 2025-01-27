@@ -3,7 +3,7 @@
 # Default settings
 PORT=8000
 COMMANDS=()
-DEFAULT_COMMANDS=("run_nbs" "convert_nbs" "clear_nbs" "script_docs" "serve_docs")
+DEFAULT_COMMANDS=("run_nbs" "clear_nbs" "serve_docs")
 RUN_DEFAULTS=true
 
 # Get the current conda environment name if one is active
@@ -73,10 +73,16 @@ export TESTING=true  # Optional: speeds up by not running animations
 
 # Function to run notebooks
 run_notebooks() {
-    echo "🔄 Running notebooks in place..."
+    echo "🔄 Running notebooks..."
+    mkdir -p docs/examples/
     for notebook in ../examples/*.ipynb; do
+        filename=$(basename "$notebook")
         echo "  Running $notebook..."
-        jupyter nbconvert --to notebook --execute "$notebook" --inplace 2>/tmp/nb_error || {
+        jupyter nbconvert --to notebook \
+            --execute "$notebook" \
+            --output-dir docs/examples/ \
+            --output "$filename" \
+            2>/tmp/nb_error || {
             error_content="Failed to execute notebook: $notebook\n$(cat /tmp/nb_error)"
             handle_error "$error_content"
         }

@@ -22,10 +22,10 @@ for notebook in ../examples/*.ipynb; do
 done
 ```
 
-2. Convert notebooks to markdown:
+1. Convert notebooks:
 
 ```bash
-jupyter nbconvert --to markdown ../examples/*.ipynb --output-dir docs/examples/ --TagRemovePreprocessor.remove_cell_tags hide
+jupyter nbconvert --to notebook ../examples/*.ipynb --output-dir docs/examples/ --TagRemovePreprocessor.remove_cell_tags hide
 ```
 
 3. Clear all notebook outputs (optional):
