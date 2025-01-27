@@ -368,7 +368,7 @@
         
   
   <span class="md-ellipsis">
-    datamate Examples
+    Examples
   </span>
   
 
@@ -938,7 +938,7 @@ the actual release.</p>
 rm<span class="w"> </span>-rf<span class="w"> </span>dist/
 
 <span class="c1"># Set version temporarily for this session manually (change version number)</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">SETUPTOOLS_SCM_PRETEND_VERSION</span><span class="o">=</span><span class="m">0</span>.0.0.dev7
+<span class="nb">export</span><span class="w"> </span><span class="nv">SETUPTOOLS_SCM_PRETEND_VERSION</span><span class="o">=</span><span class="m">0</span>.0.0.dev1
 
 <span class="c1"># Now build and test</span>
 python<span class="w"> </span>-m<span class="w"> </span>build
@@ -948,43 +948,12 @@ python<span class="w"> </span>-m<span class="w"> </span>twine<span class="w"> </
 </code></pre></div>
 <h3 id="test-installation">Test Installation<a class="headerlink" href="#test-installation" title="Permanent link">&para;</a></h3>
 <p>In a clean environment, run these sporadic tests to verify the installation:
-<div class="highlight"><pre><span></span><code><span class="c1"># Install in clean environment to test (change version number)</span>
-python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--index-url<span class="w"> </span>https://test.pypi.org/simple/<span class="w"> </span>--extra-index-url<span class="w"> </span>https://pypi.org/simple/<span class="w"> </span><span class="nv">flyvis</span><span class="o">==</span><span class="m">0</span>.0.0.dev7
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--index-url<span class="w"> </span>https://test.pypi.org/simple/<span class="w"> </span>--extra-index-url<span class="w"> </span>https://pypi.org/simple/<span class="w"> </span><span class="s2">&quot;datamate==0.0.0.dev1&quot;</span>
 
-<span class="c1"># Test installation</span>
-flyvis<span class="w"> </span>download-pretrained
-flyvis<span class="w"> </span>train<span class="w"> </span>--help
-flyvis<span class="w"> </span>train-single<span class="w"> </span>--help
-python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from flyvis import Network; n = Network()&quot;</span>
-python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from flyvis import EnsembleView; e = EnsembleView(&#39;flow/0000&#39;)&quot;</span>
+python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from datamate import Directory; d = Directory(); assert not d.path.exists()&quot;</span>
 
+pip<span class="w"> </span>uninstall<span class="w"> </span>datamate<span class="w"> </span>-y
 
-<span class="c1"># Test custom configuration</span>
-flyvis<span class="w"> </span>init-config
-<span class="c1"># Add custom_syn_strength.yaml to flyvis_config/network/edge_config/syn_strength/</span>
-cat<span class="w"> </span>&gt;<span class="w"> </span>flyvis_config/network/edge_config/syn_strength/custom_syn_strength.yaml<span class="w"> </span><span class="s">&lt;&lt; &#39;EOL&#39;</span>
-<span class="s">defaults:</span>
-<span class="s">  - /network/edge_config/syn_strength/syn_strength@_here_</span>
-<span class="s">  - _self_</span>
-
-<span class="s">scale: 1.0</span>
-<span class="s">EOL</span>
-<span class="c1"># Run training and check if custom config is loaded correctly</span>
-flyvis<span class="w"> </span>train-single<span class="w"> </span>--config-dir<span class="w"> </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span>/flyvis_config<span class="w"> </span>network/edge_config/syn_strength<span class="o">=</span>custom_syn_strength<span class="w"> </span><span class="nv">ensemble_and_network_id</span><span class="o">=</span><span class="m">0</span><span class="w"> </span><span class="nv">task_name</span><span class="o">=</span>flow<span class="w"> </span><span class="nv">delete_if_exists</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="k">while</span><span class="w"> </span><span class="nb">read</span><span class="w"> </span>line<span class="p">;</span><span class="w"> </span><span class="k">do</span>
-<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$line</span><span class="s2">&quot;</span>
-<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="o">[[</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$line</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">==</span><span class="w"> </span>*<span class="s2">&quot;&#39;syn_strength&#39;: {&#39;type&#39;: &#39;SynapseCountScaling&#39;&quot;</span>*<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$line</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">==</span><span class="w"> </span>*<span class="s2">&quot;&#39;scale&#39;: 1.0&quot;</span>*<span class="w"> </span><span class="o">]]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
-<span class="w">        </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Found custom scale parameter in config!&quot;</span>
-<span class="w">        </span>pkill<span class="w"> </span>-P<span class="w"> </span><span class="nv">$$</span>
-<span class="w">        </span><span class="k">break</span>
-<span class="w">    </span><span class="k">fi</span>
-<span class="k">done</span>
-<span class="c1"># Delete custom config</span>
-rm<span class="w"> </span>-rf<span class="w"> </span>flyvis_config
-
-<span class="c1"># Delete installation and downloaded models</span>
-pip<span class="w"> </span>uninstall<span class="w"> </span>flyvis<span class="w"> </span>-y
-
-<span class="c1"># When done testing, unset it</span>
 <span class="nb">unset</span><span class="w"> </span>SETUPTOOLS_SCM_PRETEND_VERSION
 </code></pre></div></p>
 <h3 id="commit-changes">Commit Changes<a class="headerlink" href="#commit-changes" title="Permanent link">&para;</a></h3>
@@ -1001,24 +970,22 @@ pip<span class="w"> </span>uninstall<span class="w"> </span>flyvis<span class="w
 <li>Bug Fixes</li>
 </ul>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>CHANGELOG.md
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs: add changelog for v1.1.2&quot;</span>
+git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;docs: add changelog for v1.0.0&quot;</span>
 </code></pre></div>
 <h3 id="create-and-push-tag">Create and Push Tag<a class="headerlink" href="#create-and-push-tag" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Create annotated tag using changelog</span>
-git<span class="w"> </span>tag<span class="w"> </span>-a<span class="w"> </span>v1.1.2<span class="w"> </span>-F<span class="w"> </span>CHANGELOG.md
+git<span class="w"> </span>tag<span class="w"> </span>-a<span class="w"> </span>v1.0.0<span class="w"> </span>-F<span class="w"> </span>CHANGELOG.md
 
-<span class="c1"># Push to both remotes</span>
+<span class="c1"># Push to remotes</span>
 git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>main
-git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v1.1.2
-git<span class="w"> </span>push<span class="w"> </span>public_repo<span class="w"> </span>main
-git<span class="w"> </span>push<span class="w"> </span>public_repo<span class="w"> </span>v1.1.2
+git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>v1.0.0
 </code></pre></div>
 <h3 id="build-and-upload-to-pypi">Build and Upload to PyPI<a class="headerlink" href="#build-and-upload-to-pypi" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Clean previous builds</span>
 rm<span class="w"> </span>-rf<span class="w"> </span>dist/
 
 <span class="c1"># Set version temporarily for this session manually</span>
-<span class="nb">export</span><span class="w"> </span><span class="nv">SETUPTOOLS_SCM_PRETEND_VERSION</span><span class="o">=</span><span class="m">1</span>.1.2
+<span class="nb">export</span><span class="w"> </span><span class="nv">SETUPTOOLS_SCM_PRETEND_VERSION</span><span class="o">=</span><span class="m">1</span>.0.0
 
 <span class="c1"># Build package</span>
 python<span class="w"> </span>-m<span class="w"> </span>build
@@ -1035,7 +1002,7 @@ python<span class="w"> </span>-m<span class="w"> </span>twine<span class="w"> </
 <h2 id="post-release">Post-release<a class="headerlink" href="#post-release" title="Permanent link">&para;</a></h2>
 <ol>
 <li>Verify package can be installed from PyPI:
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>flyvis
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>datamate
 </code></pre></div></li>
 </ol>
 <h2 id="check-documentation-is-updated-on-the-documentation-website">Check documentation is updated on the documentation website<a class="headerlink" href="#check-documentation-is-updated-on-the-documentation-website" title="Permanent link">&para;</a></h2>
@@ -1047,8 +1014,6 @@ python<span class="w"> </span>-m<span class="w"> </span>twine<span class="w"> </
 <h2 id="notes">Notes<a class="headerlink" href="#notes" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Always test on Test PyPI before releasing to PyPI</li>
-<li>Ideally CI checks pass before releasing</li>
-<li>Keep both origin and public_repo remotes in sync</li>
 </ul>
 
 
