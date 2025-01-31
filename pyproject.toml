@@ -41,6 +41,8 @@ dev = [
     "ruff",
     "pytest-cov",
     "pytest-asyncio",
+    "tqdm",
+    "jupyter"
 ]
 docs = [
     "mkdocs",
