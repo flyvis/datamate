@@ -20,7 +20,7 @@ from numpy import ndarray
 from pathlib import Path
 
 import pandas as pd
-
+import numpy as np
 __all__ = ["Namespace", "namespacify", "is_disjoint", "is_subset", "is_superset"]
 
 # -- Namespaces ----------------------------------------------------------------
@@ -542,6 +542,8 @@ def all_true(obj: Any) -> bool:
         return all([all_true(v.item()) for v in obj])
     elif isinstance(obj, Mapping):
         return all([all_true(obj[k]) for k in obj])
+    elif isinstance(obj, np.generic):
+        return bool(obj.item())
     else:
         try:
             return all_true(vars(obj))
