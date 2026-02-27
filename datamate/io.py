@@ -76,18 +76,37 @@ class H5Reader(ArrayFile):
         self, path: Path, assert_swmr: bool = True, n_retries: int = 10
     ) -> None:
         self.path = Path(path)
-        with h5.File(self.path, mode="r", libver="latest", swmr=True) as f:
+        self._swmr = True
+        try:
+            with h5.File(self.path, mode="r", libver="latest", swmr=True) as f:
+                if assert_swmr:
+                    assert f.swmr_mode, "File is not in SWMR mode."
+                assert "data" in f
+                self.shape = f["data"].shape
+                self.dtype = f["data"].dtype
+        except OSError:
             if assert_swmr:
-                assert f.swmr_mode, "File is not in SWMR mode."
-            assert "data" in f
-            self.shape = f["data"].shape
-            self.dtype = f["data"].dtype
+                raise
+            # Fall back to opening without SWMR mode (e.g. pre-existing files
+            # that were not written with SWMR, or systems where SWMR is
+            # unsupported).
+            self._swmr = False
+            with h5.File(self.path, mode="r") as f:
+                assert "data" in f
+                self.shape = f["data"].shape
+                self.dtype = f["data"].dtype
         self.n_retries = n_retries
+
+    def _open_file(self) -> h5.File:
+        """Open the HDF5 file using the mode determined at initialisation."""
+        if self._swmr:
+            return h5.File(self.path, mode="r", libver="latest", swmr=True)
+        return h5.File(self.path, mode="r")
 
     def __getitem__(self, key):
         for retry_count in range(self.n_retries):
             try:
-                with h5.File(self.path, mode="r", libver="latest", swmr=True) as f:
+                with self._open_file() as f:
                     data = f["data"][key]
                 break
             except Exception as e:
@@ -103,7 +122,7 @@ class H5Reader(ArrayFile):
         # get attribute from underlying h5.Dataset object
         for retry_count in range(self.n_retries):
             try:
-                with h5.File(self.path, mode="r", libver="latest", swmr=True) as f:
+                with self._open_file() as f:
                     value = getattr(f["data"], key, None)
                 break
             except Exception as e:
@@ -117,7 +136,7 @@ class H5Reader(ArrayFile):
 
             def safe_wrapper(*args, **kwargs):
                 # not trying `n_retries` times here, just for simplicity
-                with h5.File(self.path, mode="r", libver="latest", swmr=True) as f:
+                with self._open_file() as f:
                     output = getattr(f["data"], key)(*args, **kwargs)
                 return output
 
@@ -158,27 +177,18 @@ def _write_h5(path: Path, val: np.ndarray) -> None:
         val: Array data to write.
     """
     val = np.asarray(val)
-    try:
-        f = h5.File(path, libver="latest", mode="w")
-        if f["data"].dtype != val.dtype:
-            raise ValueError()
-        f["data"][...] = val
-        f.swmr_mode = True
-        assert f.swmr_mode
-    except Exception:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        if path.is_dir():
-            path.rmdir()
-        elif path.exists():
-            try:
-                path.unlink()
-            except FileNotFoundError:
-                pass
-        f = h5.File(path, libver="latest", mode="w")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.is_dir():
+        path.rmdir()
+    elif path.exists():
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+    with h5.File(path, libver="latest", mode="w") as f:
         f["data"] = val
         f.swmr_mode = True
         assert f.swmr_mode
-    f.close()
 
 
 def _extend_h5(path: Path, val: object, retry: int = 0, max_retries: int = 50) -> None:
