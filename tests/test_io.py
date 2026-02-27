@@ -41,11 +41,20 @@ def test_write_h5_creates_parent_dirs(tmp_path):
     assert path.exists()
 
 
-def test_write_h5_replaces_dir_at_path(tmp_path):
-    """_write_h5 must replace a directory that sits at the target path."""
+def test_write_h5_replaces_empty_dir_at_path(tmp_path):
+    """_write_h5 must replace an empty directory that sits at the target path."""
     path = tmp_path / "data.h5"
     path.mkdir()
     _write_h5(path, np.array([1, 2, 3]))
+    assert path.is_file()
+
+
+def test_write_h5_replaces_nonempty_dir_at_path(tmp_path):
+    """_write_h5 must replace a non-empty directory using shutil.rmtree."""
+    path = tmp_path / "data.h5"
+    path.mkdir()
+    (path / "child.txt").write_text("hello")
+    _write_h5(path, np.array([4, 5, 6]))
     assert path.is_file()
 
 
@@ -125,6 +134,32 @@ def test_h5reader_assert_swmr_raises_for_non_swmr_file(tmp_path, monkeypatch):
 
     with pytest.raises(OSError):
         H5Reader(path, assert_swmr=True)
+
+
+def test_h5reader_fallback_chains_exception_on_double_failure(tmp_path, monkeypatch):
+    """When both the SWMR open and the fallback open fail, the fallback OSError
+    must be chained from the original SWMR OSError."""
+    path = tmp_path / "swmr.h5"
+    val = np.array([1.0])
+    _write_h5(path, val)
+
+    original_file = h5py.File
+    call_count = [0]
+
+    def patched_file(p, mode="r", **kwargs):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            raise OSError(_SWMR_OPEN_ERROR)
+        raise OSError("fallback also failed")
+
+    monkeypatch.setattr(h5py, "File", patched_file)
+    import datamate.io as io_mod
+    monkeypatch.setattr(io_mod, "h5", h5py)
+
+    with pytest.raises(OSError, match="fallback also failed") as exc_info:
+        H5Reader(path, assert_swmr=False)
+    assert exc_info.value.__cause__ is not None
+    assert _SWMR_OPEN_ERROR in str(exc_info.value.__cause__)
 
 
 def test_read_h5_fallback_without_swmr(tmp_path):

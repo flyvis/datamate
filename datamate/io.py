@@ -84,17 +84,20 @@ class H5Reader(ArrayFile):
                 assert "data" in f
                 self.shape = f["data"].shape
                 self.dtype = f["data"].dtype
-        except OSError:
+        except OSError as e:
             if assert_swmr:
                 raise
             # Fall back to opening without SWMR mode (e.g. pre-existing files
             # that were not written with SWMR, or systems where SWMR is
             # unsupported).
             self._swmr = False
-            with h5.File(self.path, mode="r") as f:
-                assert "data" in f
-                self.shape = f["data"].shape
-                self.dtype = f["data"].dtype
+            try:
+                with h5.File(self.path, mode="r") as f:
+                    assert "data" in f
+                    self.shape = f["data"].shape
+                    self.dtype = f["data"].dtype
+            except OSError as fallback_e:
+                raise fallback_e from e
         self.n_retries = n_retries
 
     def _open_file(self) -> h5.File:
@@ -179,7 +182,7 @@ def _write_h5(path: Path, val: np.ndarray) -> None:
     val = np.asarray(val)
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_dir():
-        path.rmdir()
+        shutil.rmtree(path)
     elif path.exists():
         try:
             path.unlink()
