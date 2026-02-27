@@ -49,15 +49,6 @@ def test_write_h5_replaces_empty_dir_at_path(tmp_path):
     assert path.is_file()
 
 
-def test_write_h5_replaces_nonempty_dir_at_path(tmp_path):
-    """_write_h5 must replace a non-empty directory using shutil.rmtree."""
-    path = tmp_path / "data.h5"
-    path.mkdir()
-    (path / "child.txt").write_text("hello")
-    _write_h5(path, np.array([4, 5, 6]))
-    assert path.is_file()
-
-
 # -- H5Reader / _read_h5 -------------------------------------------------------
 
 

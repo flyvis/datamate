@@ -182,7 +182,7 @@ def _write_h5(path: Path, val: np.ndarray) -> None:
     val = np.asarray(val)
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_dir():
-        shutil.rmtree(path)
+        path.rmdir()
     elif path.exists():
         try:
             path.unlink()
